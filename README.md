@@ -1,6 +1,6 @@
 # interactive-html-slides
 
-Skill portable de creación de presentaciones HTML educativas desde temarios y PowerPoint. Incluye motor de navegación, animaciones progresivas, notas, índice, soluciones, temporizador, ejercicios formativos autocorregibles, persistencia local, plantilla CSS, validadores y extractor PPTX.
+Skill portable de creación de presentaciones HTML educativas desde temarios y PowerPoint. Incluye motor de navegación, notas, índice, soluciones, temporizador, ejercicios formativos autocorregibles, persistencia local, plantilla CSS, validadores y extractor PPTX.
 
 ## Ejecución autocontenida con uv
 
@@ -11,14 +11,13 @@ Los tres scripts declaran metadatos PEP 723: Python **3.12.x** y sus dependencia
 ```bash
 uv run --script scripts/create_deck.py --content examples/demo-content.json --output /tmp/mi-curso
 uv run --script scripts/validate_deck.py /tmp/mi-curso
-python3 -m http.server 8000 -d /tmp/mi-curso
 ```
 
-Abre `http://localhost:8000`. Para PPTX: `uv run --script scripts/extract_pptx.py clase.pptx --output /tmp/clase-extract.json`. El JSON extraído es un inventario para que un agente componga el guion, no la presentación final.
+Abre `/tmp/mi-curso/index.html` directamente. El borrador y el HTML definitivo funcionan offline sin servidor; si el navegador restringe `file://`, sirve la carpeta con `python3 -m http.server 8000 -d /tmp/mi-curso`. El tema visual base usa papel de bloc, crema, naranja y amarillo inspirado en SPADE; las diapositivas se componen a aproximadamente el 85% del ancho visible y ajustan tipografía para evitar desbordarse. Para PPTX: `uv run --script scripts/extract_pptx.py clase.pptx --output /tmp/clase-extract.json`. El JSON extraído es un inventario para que un agente componga el guion, no la presentación final.
 
 Instalación en Codex: copiar esta carpeta a `~/.agents/skills/interactive-html-slides/` o `.agents/skills/interactive-html-slides/`; en Claude Code: `~/.claude/skills/interactive-html-slides/` o `.claude/skills/interactive-html-slides/`. Para compartir, comprimir **la carpeta** entera.
 
-La inspiración funcional procede de https://spadeagents.eu/taller-skills/presentacion/ . El CSS y JavaScript de este kit están escritos de nuevo, no extraídos de la web.
+Las presentaciones utilizan el CSS y los componentes del Taller de Skills con las cuatro fuentes incrustadas.
 
 Advertencias: no es plataforma de exámenes seguros; las respuestas están en el navegador. La persistencia utiliza almacenamiento local y puede no funcionar en navegación privada o políticas restrictivas.
 
@@ -26,7 +25,7 @@ Pruebas: `uv run --python 3.12 python -m unittest discover -s tests -v`. Para se
 
 ## Editor visual y HTML definitivo
 
-La salida generada es un **borrador editable**. Admite **0–3 logos** opcionales en la cabecera, subidos desde el editor o declarados en `meta.logos` del JSON (rutas locales). Cada logo se incrusta como Base64: la versión final no descarga imágenes ni deja hueco cuando no se configura ninguno. Abre la presentación mediante el servidor local y pulsa **✎ Editar**. Puedes corregir títulos, párrafos y viñetas directamente sobre el texto; el panel lateral permite editar notas, destacados y ejercicios (JSON). El selector muestra todas las diapositivas y permite **desactivar o reactivar** cada una; las desactivadas no aparecen durante la proyección.
+La salida generada es un **borrador editable**. Admite **0–3 logos** opcionales en la cabecera, subidos desde el editor o declarados en `meta.logos` del JSON (rutas locales). Cada logo se incrusta como Base64: la versión final no descarga imágenes ni deja hueco cuando no se configura ninguno. Abre `index.html` directamente y pulsa **✎ Editar**. Puedes corregir títulos, párrafos y viñetas directamente sobre el texto; el panel lateral permite editar notas, destacados y ejercicios (JSON). El selector muestra todas las diapositivas y permite **desactivar o reactivar** cada una; las desactivadas no aparecen durante la proyección.
 
 Los cambios se guardan automáticamente en `localStorage`. Para conservarlos fuera del navegador usa **Descargar borrador JSON**; para restaurarlos desde otro equipo utiliza **Importar JSON** o reemplaza `assets/content.json`. La acción **Restaurar contenido original** descarta los cambios locales.
 

@@ -37,11 +37,33 @@ function save(){const deck=app().getDeck();try{localStorage.setItem('interactive
 function message(msg){$('editorMessage').textContent=msg}
 function download(filename,content,mime){const blob=new Blob([content],{type:mime});const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),10000)}
 function filename(){return (app().getDeck().meta.id||'presentacion').replace(/[^a-z0-9_-]/gi,'-')}
-function populate(){const deck=app().getDeck(),list=$('slidePicker');list.replaceChildren();deck.slides.forEach((s,i)=>{const op=document.createElement('option');op.value=s.id;op.textContent=`${i+1}. ${s.disabled?'[Oculta] ':''}${s.title}`;list.append(op)});const s=selectedSlide();if(!s)return;list.value=s.id;$('slideEnabled').checked=!s.disabled;$('slideTitle').value=s.title||'';$('slideSubtitle').value=s.subtitle||'';$('slideBody').value=Array.isArray(s.body)?s.body.join('\n'):s.body||'';$('slideBullets').value=(s.bullets||[]).join('\n');$('slideCallout').value=s.callout||'';$('slideNotes').value=s.notes||'';$('exerciseJson').value=s.exercise?JSON.stringify(s.exercise,null,2):'';renderLogoEditor()}
-function setFields(){const s=selectedSlide();if(!s)return;const patch={};for(const id of editedFields){let value=$(id).value;const field=fields[id];if(field==='bullets')value=value.split('\n').map(x=>x.trim()).filter(Boolean);else if(field==='body')value=value.split('\n').map(x=>x.trim()).filter(Boolean);patch[field]=value}app().updateSlide(s.id,patch);save();populate()}
-function enableInline(){if($('editorPanel').hidden)return;const current=app().getCurrentSlide();if(!current)return;const root=$('stage').querySelector('.slide');if(!root)return;const targets=[['h1','title'],['.subtitle','subtitle'],['.eyebrow','eyebrow'],['.callout','callout']];for(const [selector,field] of targets){const el=root.querySelector(selector);if(el)attach(el,field)}root.querySelectorAll('.body p').forEach((el,i)=>attach(el,'body',i));root.querySelectorAll('.bullets li').forEach((el,i)=>attach(el,'bullets',i));}
-function attach(el,field,index){el.contentEditable='true';el.dataset.editField=field;el.setAttribute('role','textbox');el.setAttribute('aria-label',`Editar ${field}`);el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();el.blur()}});el.addEventListener('blur',()=>{const s=app().getCurrentSlide();if(!s)return;const patch={};const val=el.textContent.trim();if(index===undefined)patch[field]=val;else{const values=Array.isArray(s[field])?[...s[field]]:[s[field]||''];values[index]=val;patch[field]=values}app().updateSlide(s.id,patch);save();populate()},{once:true})}
-function toggleEditor(force){const show=force===undefined?$('editorPanel').hidden:force;$('editorPanel').hidden=!show;document.body.classList.toggle('editor-open',show);if(show){selected=app()?.getCurrentSlide()?.id||selected;populate();enableInline()}else $('stage').querySelectorAll('[data-edit-field]').forEach(el=>{el.removeAttribute('contenteditable');el.removeAttribute('data-edit-field');el.removeAttribute('role')})}
+function populate(){const deck=app().getDeck(),list=$('slidePicker');list.replaceChildren();deck.slides.forEach((s,i)=>{const op=document.createElement('option');op.value=s.id;op.textContent=`${i+1}. ${s.disabled?'[Oculta] ':''}${s.title}`;list.append(op)});const s=selectedSlide();if(!s)return;list.value=s.id;$('slideEnabled').checked=!s.disabled;$('exerciseJson').value=s.exercise?JSON.stringify(s.exercise,null,2):'';renderLogoEditor()}
+function enableInline(){
+ const slide=app().getCurrentSlide();
+ function edit(el,write){
+   if(!el)return;
+   el.contentEditable='plaintext-only';
+   el.dataset.editField='true';
+   el.oninput=()=>{write(el.textContent);save()};
+ }
+ for(const [selector,key] of [['h1,h2','title'],['.subtitle','subtitle'],['.eyebrow','eyebrow'],['.callout','callout'],['.code-example','code']])
+   edit($('stage').querySelector(selector),v=>slide[key]=v);
+ for(const [selector,key] of [['.body p','body'],['.bullets li','bullets']])
+   $('stage').querySelectorAll(selector).forEach((el,i)=>edit(el,v=>{
+     if(!Array.isArray(slide[key]))slide[key]=[slide[key]];
+     slide[key][i]=v;
+   }));
+ edit($('stage').querySelector('.prompt'),v=>slide.exercise.prompt=v);
+ $('stage').querySelectorAll('.option span').forEach((el,i)=>edit(el,v=>slide.exercise.options[i].label=v));
+ edit($('notesBody'),v=>slide.notes=v);
+}
+function toggleEditor(){
+ const on=document.body.classList.toggle('inline-edit');
+ $('editorBtn').textContent=on?'Terminar edición':'✎ Editar';
+ $('editorBtn').setAttribute('aria-pressed',String(on));
+ if(on){enableInline();$('stage').querySelector('h1,h2').focus()}
+ else {document.querySelectorAll('[data-edit-field]').forEach(el=>{el.oninput=null;el.removeAttribute('contenteditable');delete el.dataset.editField});app().render()}
+}
 function safeScript(s){return s.replace(/<\/script/gi,'<\\/script')}
 function publishedRuntime(source){
   // Remove the draft loader, local editorial state and editor API from the published runtime.
@@ -91,15 +113,18 @@ const button=$('publishBtn');button.disabled=true;button.textContent='Preparando
   base.querySelectorAll('.editor-control,[data-editor-asset]').forEach(el=>el.remove());
   base.querySelector('#stage').replaceChildren();base.querySelector('#presentationLogos').replaceChildren();base.querySelector('#presentationLogos').hidden=true;
   base.querySelectorAll('[data-edit-field],[contenteditable]').forEach(el=>{el.removeAttribute('data-edit-field');el.removeAttribute('contenteditable')});
-  base.querySelector('body').classList.remove('editor-open');
+  base.querySelector('body').classList.remove('editor-open','inline-edit');
   base.querySelector('#indexList').replaceChildren();
   base.querySelector('#notesBody').replaceChildren();
   base.querySelector('#brand').textContent='Presentación';base.querySelector('#chapter').textContent='';base.querySelector('#counter').textContent='1 / 1';base.querySelector('#completion').textContent='';base.querySelector('#progressBar').style.width='0%';
   base.querySelector('#indexPanel').hidden=true;base.querySelector('#notesPanel').hidden=true;base.querySelector('#timer').hidden=true;
-  base.querySelectorAll('script[src]').forEach(el=>el.remove());
-  const cssLink=base.querySelector('link[href="assets/slides.css"]');if(!cssLink)throw Error('No se encontró la hoja CSS');
-  const files=await Promise.all(['assets/slides.css','assets/exercises.js','assets/slides.js'].map(async path=>{const res=await fetch(path);if(!res.ok)throw Error('No se pudo cargar '+path);return res.text()}));
-  if(/@import\b|url\s*\(/i.test(files[0]))throw Error('El CSS contiene dependencias url() o @import; incrústalas antes de publicar');
+  base.querySelectorAll('script[src],#embedded-deck,#embedded-publish-resources').forEach(el=>el.remove());
+  const cssLink=base.querySelector('link[href="assets/slides.css"],style[data-runtime-style]');if(!cssLink)throw Error('No se encontró la hoja CSS');
+  const resources=document.getElementById('embedded-publish-resources');
+  if(!resources)throw Error('No se encontró el paquete local para publicar');
+  const bundle=JSON.parse(resources.textContent);
+  const files=[bundle.css,bundle.exercises,bundle.slides];
+  if(/@import\b|url\s*\(\s*(?!["']?data:)/i.test(files[0]))throw Error('El CSS contiene dependencias url() o @import; incrústalas antes de publicar');
   const css=document.createElement('style');css.textContent=files[0];cssLink.replaceWith(css);
   const data=JSON.parse(JSON.stringify(app().getDeck()));data.slides=enabled.map(s=>{const out={...s};delete out.disabled;return out});
   const embedded=document.createElement('script');embedded.id='embedded-deck';embedded.type='application/json';embedded.textContent=JSON.stringify(data).replace(/</g,'\\u003c');base.querySelector('body').append(embedded);
@@ -110,17 +135,16 @@ const button=$('publishBtn');button.disabled=true;button.textContent='Preparando
 }catch(e){message('No se pudo generar el HTML: '+e.message);console.error(e)}finally{button.disabled=false;button.textContent='Generar HTML definitivo'}}
 function bind(){
   $('logoUpload').addEventListener('change',uploadLogos);
-  $('editorBtn').addEventListener('click',()=>toggleEditor());$('editorClose').addEventListener('click',()=>toggleEditor(false));
+  $('editorBtn').addEventListener('click',()=>toggleEditor());$('manageBtn').onclick=()=>{selected=app().getCurrentSlide().id;populate();$('editorPanel').hidden=false};$('editorClose').onclick=()=>{$('editorPanel').hidden=true};
   $('slidePicker').addEventListener('change',()=>{selected=$('slidePicker').value;const s=selectedSlide();if(s&&!s.disabled)app().goToSlideId(s.id);populate()});
   $('slideEnabled').addEventListener('change',()=>{const s=selectedSlide();if(!s)return;const ok=app().setSlideEnabled(s.id,$('slideEnabled').checked);if(!ok){$('slideEnabled').checked=true;message('No puedes ocultar la última diapositiva activa.');return}save();populate()});
-  editedFields.forEach(id=>$(id).addEventListener('change',setFields));
   $('exerciseApply').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;try{const text=$('exerciseJson').value.trim();const ex=text?JSON.parse(text):null;if(ex&&(!ex.type||!ex.id))throw Error('Faltan type o id');app().updateSlide(s.id,{exercise:ex});save();populate();message('Ejercicio actualizado.')}catch(e){message('JSON de ejercicio inválido: '+e.message)}});
   $('saveDraftBtn').addEventListener('click',()=>download(filename()+'-borrador.json',JSON.stringify(app().getDeck(),null,2)+'\n','application/json'));
   $('loadDraftBtn').addEventListener('click',()=>$('loadDraftFile').click());
   $('loadDraftFile').addEventListener('change',async()=>{const file=$('loadDraftFile').files[0];if(!file)return;try{const deck=JSON.parse(await file.text());if(deck.meta?.id!==originalDeck.meta.id)throw Error('El ID de la presentación no coincide');app().replaceDeck(deck);selected=app().getCurrentSlide().id;save();populate();message('Borrador importado.')}catch(e){message('No se pudo importar: '+e.message)}finally{$('loadDraftFile').value=''}});
   $('resetDraftBtn').addEventListener('click',()=>{if(!confirm('¿Descartar todos los cambios locales y restaurar la presentación original?'))return;localStorage.removeItem('interactive-editor:'+originalDeck.meta.id);app().replaceDeck(JSON.parse(JSON.stringify(originalDeck)));selected=app().getCurrentSlide().id;populate();message('Presentación original restaurada.')});
   $('publishBtn').addEventListener('click',publish);
-  window.addEventListener('slides:render',()=>{if(!$('editorPanel').hidden){const current=app().getCurrentSlide();if(current&&!selectedSlide()?.disabled)selected=current.id;populate();enableInline()}});
+  window.addEventListener('slides:render',()=>{if(!$('editorPanel').hidden){const current=app().getCurrentSlide();if(current&&!selectedSlide()?.disabled)selected=current.id;populate()}if(document.body.classList.contains('inline-edit'))enableInline()});
 }
-window.addEventListener('slides:ready',async()=>{try{const res=await fetch('assets/content.json');originalDeck=await res.json()}catch(e){originalDeck=JSON.parse(JSON.stringify(app().getDeck()))}selected=app().getCurrentSlide()?.id;bind();populate()});
+window.addEventListener('slides:ready',async()=>{try{originalDeck=JSON.parse($('embedded-deck').textContent)}catch(e){originalDeck=JSON.parse(JSON.stringify(app().getDeck()))}selected=app().getCurrentSlide()?.id;bind();populate()});
 })();

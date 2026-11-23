@@ -3,10 +3,10 @@
 `assets/content.json` es UTF-8. Estructura:
 
 ```json
-{"meta":{"id":"curso-2026","title":"Título","subtitle":"Subtítulo","duration":"90 min","language":"es","theme":"indigo"},"slides":[{"id":"intro","type":"cover","chapter":"Inicio","title":"Título","subtitle":"Resumen","notes":"Guion del ponente"},{"id":"concepto","type":"content","chapter":"Bloque 1","eyebrow":"Concepto","title":"Una idea","body":["Párrafo 1","Párrafo 2"],"bullets":["Uno","Dos"],"reveal":true},{"id":"quiz","type":"exercise","chapter":"Bloque 1","title":"Comprueba tu comprensión","exercise":{"id":"q1","type":"single","prompt":"¿Cuál es correcta?","options":[{"value":"a","label":"A"},{"value":"b","label":"B"}],"answer":"b","explanation":"Porque...","minutes":3}}]}
+{"meta":{"id":"curso-2026","title":"Título","subtitle":"Subtítulo","duration":"90 min","language":"es","theme":"light"},"slides":[{"id":"intro","type":"cover","chapter":"Inicio","title":"Título","subtitle":"Resumen","notes":"Guion del ponente"},{"id":"concepto","type":"content","chapter":"Bloque 1","eyebrow":"Concepto","title":"Una idea","body":["Párrafo 1","Párrafo 2"],"bullets":["Uno","Dos"]},{"id":"quiz","type":"exercise","chapter":"Bloque 1","title":"Comprueba tu comprensión","exercise":{"id":"q1","type":"single","prompt":"¿Cuál es correcta?","options":[{"value":"a","label":"A"},{"value":"b","label":"B"}],"answer":"b","explanation":"Porque...","minutes":3}}]}
 ```
 
-Tipos de slide: `cover` (subtitle), `section` (subtitle), `content` (body como string o array, bullets, callout opcional), `exercise` (exercise obligatorio), `summary` (bullets). Todos admiten `notes`, `chapter`, `eyebrow`, `reveal`, `solution`. Las claves `id` deben ser estables y únicas.
+Tipos de slide: `cover` (subtitle), `section` (subtitle), `content` (body como string o array, bullets, callout opcional), `exercise` (exercise obligatorio), `summary` (bullets). Todos admiten `notes`, `chapter`, `eyebrow`, `solution`. Las claves `id` deben ser estables y únicas.
 
 Ejercicios:
 

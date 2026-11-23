@@ -1,8 +1,8 @@
 # Tema y despliegue
 
-Personaliza `assets/slides.css` modificando `:root`: `--bg`, `--panel`, `--text`, `--muted`, `--accent`, `--accent-soft`, `--radius` y fuente. El selector `meta.theme` aplica variantes `indigo` (default), `teal`, `magenta`; para otras, añade CSS.
+Usa por defecto la plantilla aprobada del Taller de Skills con las fuentes incrustadas Bricolage Grotesque, Source Sans 3, JetBrains Mono y Caveat. Conserva la cuadrícula clara, los acentos naranja, las notas y el índice por capítulos.
 
-Usa `data-reveal` únicamente para bloques que admiten presentación progresiva. Habilita `reveal:true` por diapositiva; la tecla siguiente muestra primero los bloques ocultos.
+Muestra todo el texto al entrar en la diapositiva. Reserva el movimiento para explicar procesos.
 
 Para servir: `python3 -m http.server 8000 -d output`. Para producción, publica la carpeta como archivos estáticos en cualquier servidor HTTPS; comprueba rutas relativas. Para marca universitaria, añade logos propios autorizados y textos alternativos, no marques los logos ajenos como libres.
 

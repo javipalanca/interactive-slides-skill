@@ -57,9 +57,24 @@ def main():
     if target.exists() and not a.force:
         parser.error(f'El archivo {target} ya existe. Usa --force para sobrescribir')
     target.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    # Embed the editable source and publication bundle so index.html also works
+    # from file:// without fetch() or a local web server.
+    bundle = {
+        'css': (a.output/'assets/slides.css').read_text(encoding='utf-8'),
+        'exercises': (a.output/'assets/exercises.js').read_text(encoding='utf-8'),
+        'slides': (a.output/'assets/slides.js').read_text(encoding='utf-8'),
+    }
+    def json_script(identifier, value):
+        payload = json.dumps(value, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c')
+        return f'<script id="{identifier}" type="application/json">{payload}</script>'
+    html_path = a.output/'index.html'
+    html = html_path.read_text(encoding='utf-8')
+    html = html.replace('</body>', json_script('embedded-deck', data) +
+                        json_script('embedded-publish-resources', bundle) + '</body>')
+    html_path.write_text(html, encoding='utf-8')
     readme = a.output/'README.md'
     if not readme.exists():
-        readme.write_text('# '+data['meta'].get('title','Presentación')+'\n\nEjecuta `python3 -m http.server 8000 -d .` desde esta carpeta y abre http://localhost:8000.\n', encoding='utf-8')
+        readme.write_text('# '+data['meta'].get('title','Presentación')+'\n\nAbre `index.html` directamente. Para servir la carpeta por HTTP también funciona.\n', encoding='utf-8')
     print(f'OK: presentación generada en {a.output.resolve()} ({len(data["slides"])} slides)')
 if __name__ == '__main__':
     main()

@@ -5,7 +5,7 @@
     "subtitle": "Microtaller de razonamiento científico",
     "duration": "20 min",
     "language": "es",
-    "theme": "indigo"
+    "theme": "light"
   },
   "slides": [
     {
@@ -28,8 +28,7 @@
         "Interpretar un resultado",
         "Comprobar lo aprendido"
       ],
-      "reveal": true,
-      "notes": "Deja que aparezcan progresivamente los objetivos."
+      "notes": "Presenta los objetivos del taller."
     },
     {
       "id": "concepto",
@@ -47,7 +46,6 @@
         "Registra los resultados antes de concluir"
       ],
       "callout": "Una correlación no demuestra por sí sola causalidad.",
-      "reveal": true,
       "notes": "Pide a alguien un ejemplo de variable de confusión."
     },
     {
@@ -153,7 +151,6 @@
         "Un experimento necesita controlar variables",
         "Una conclusión requiere pruebas"
       ],
-      "reveal": true,
       "notes": "Pide una conclusión crítica de un experimento cotidiano.",
       "solution": "Ejemplo: comparar un grupo con y sin intervención, con condiciones similares."
     }

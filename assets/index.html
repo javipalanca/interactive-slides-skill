@@ -1,28 +1,21 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101525"><title>Presentación interactiva</title><link rel="stylesheet" href="assets/slides.css"><link rel="stylesheet" href="assets/editor.css" data-editor-asset></head>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fff2d5"><title>Presentación interactiva</title><link rel="stylesheet" href="assets/slides.css"><link rel="stylesheet" href="assets/editor.css" data-editor-asset></head>
 <body><div id="app" class="app">
-<header class="topbar"><span id="brand" class="brand">Presentación</span><span id="chapter" class="chapter"></span><div id="presentationLogos" class="presentation-logos" aria-label="Logotipos de la presentación" hidden></div><div class="top-actions"><button id="editorBtn" class="editor-control" title="Abrir herramientas de edición">✎ Editar</button><button id="indexBtn" title="Índice (O)" aria-label="Abrir índice">☷ Índice</button><button id="notesBtn" title="Notas (N)">Notas</button><button id="fullscreenBtn" title="Pantalla completa (F)">⛶</button></div></header>
-<main id="stage" tabindex="-1" aria-label="Diapositiva actual"></main>
-<div class="progress-track" aria-hidden="true"><div id="progressBar"></div></div>
-<footer class="footer"><button id="prevBtn" aria-label="Diapositiva anterior">←</button><span id="counter">1 / 1</span><button id="nextBtn" aria-label="Siguiente elemento o diapositiva">→</button><span id="completion"></span></footer>
-<div id="indexPanel" class="overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="indexTitle"><div class="dialog-heading"><h2 id="indexTitle">Índice</h2><button data-close="indexPanel">Cerrar ×</button></div><nav id="indexList" aria-label="Lista de diapositivas"></nav></section></div>
-<div id="notesPanel" class="overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notesTitle"><div class="dialog-heading"><h2 id="notesTitle">Notas del ponente</h2><button data-close="notesPanel">Cerrar ×</button></div><div id="notesBody" class="notes-body"></div></section></div>
+
+<div id="deck"><main id="stage" tabindex="-1" aria-label="Diapositiva actual"></main></div>
+<nav id="nav"><div class="pbar"><span id="progressBar"></span></div><button class="nb" id="prevBtn">←</button><span class="cnt" id="counter"></span><button class="nb" id="nextBtn">→</button><span class="ttl"><b id="brand"></b> · <span id="chapter"></span></span><span id="completion"></span><div id="presentationLogos" hidden></div><button class="nb editor-control" id="editorBtn">✎ Editar</button><button class="nb editor-control" id="manageBtn">Gestionar</button><button class="nb" id="indexBtn">Índice <kbd>O</kbd></button><button class="nb" id="notesBtn">Notas <kbd>N</kbd></button><button class="nb" id="fullscreenBtn">⛶</button></nav>
+<div id="indexPanel" class="overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="indexTitle"><div class="oh dialog-heading"><h2 id="indexTitle">Índice</h2><button data-close="indexPanel">Cerrar ×</button></div><nav id="indexList" class="og" aria-label="Lista de diapositivas"></nav></section></div>
+<div id="notesPanel" class="overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notesTitle"><div class="oh dialog-heading"><h2 id="notesTitle">Notas del ponente</h2><button data-close="notesPanel">Cerrar ×</button></div><div id="notesBody" class="notes-body"></div></section></div>
 <div id="timer" class="timer" hidden><span id="timerDisplay">00:00</span><button id="timerToggle">Iniciar</button><button id="timerPlus" aria-label="Añadir un minuto">+1</button><button id="timerClose" aria-label="Cerrar temporizador">×</button></div>
 <aside id="editorPanel" class="editor-panel editor-control" hidden aria-label="Editor de presentación">
-  <div class="editor-header"><strong>Edición de la presentación</strong><button id="editorClose" aria-label="Cerrar editor">×</button></div>
-  <p class="editor-help">Haz clic sobre el texto de la diapositiva para editarlo o utiliza los campos inferiores. Cambios guardados en este navegador.</p>
+  <div class="editor-header"><strong>Gestión de la presentación</strong><button id="editorClose" aria-label="Cerrar editor">×</button></div>
+  
   <details open><summary>Logotipos (opcional, máximo 3)</summary><p class="editor-help">Sube PNG, JPEG, WebP o GIF. Las imágenes se guardan en el borrador y se incrustan en el HTML definitivo como Base64. Si no hay logos, no se reserva espacio.</p><label for="logoUpload">Añadir logotipos</label><input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple><div id="logoEditorList" class="logo-editor-list"></div></details>
   <label for="slidePicker">Diapositiva</label><select id="slidePicker"></select>
   <label class="editor-checkbox"><input id="slideEnabled" type="checkbox" checked> Incluir esta diapositiva en la versión definitiva</label>
-  <label for="slideTitle">Título</label><input id="slideTitle" type="text">
-  <label for="slideSubtitle">Subtítulo</label><input id="slideSubtitle" type="text">
-  <label for="slideBody">Párrafos (uno por línea)</label><textarea id="slideBody" rows="4"></textarea>
-  <label for="slideBullets">Viñetas (una por línea)</label><textarea id="slideBullets" rows="4"></textarea>
-  <label for="slideCallout">Destacado</label><textarea id="slideCallout" rows="2"></textarea>
-  <label for="slideNotes">Notas del ponente</label><textarea id="slideNotes" rows="3"></textarea>
   <details><summary>Configuración avanzada (ejercicio)</summary><label for="exerciseJson">Ejercicio en JSON</label><textarea id="exerciseJson" rows="7" spellcheck="false"></textarea><button id="exerciseApply">Aplicar ejercicio</button></details>
   <p id="editorMessage" role="status" aria-live="polite"></p>
   <div class="editor-actions"><button id="saveDraftBtn">Descargar borrador JSON</button><button id="loadDraftBtn">Importar JSON…</button><input id="loadDraftFile" type="file" accept=".json,application/json" hidden><button id="resetDraftBtn">Restaurar contenido original</button><button class="primary" id="publishBtn">Generar HTML definitivo</button></div>
  </aside>
  <div id="status" class="sr-only" role="status" aria-live="polite"></div>
-</div><script src="assets/exercises.js" defer></script><script src="assets/slides.js" defer></script><script src="assets/editor.js" defer data-editor-asset></script></body></html>
+</div><script src="assets/exercises.js" defer></script><script src="assets/editor.js" defer data-editor-asset></script><script src="assets/slides.js" defer></script></body></html>
