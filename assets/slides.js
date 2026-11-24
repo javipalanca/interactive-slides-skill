@@ -44,6 +44,12 @@ function renderIllustration(slide,root){
  if(typeof value==='string'&&value.startsWith('data:image/')){const img=node('img','doodle cover-art');img.src=value;img.alt='';img.decoding='async';root.append(img);return}
  root.insertAdjacentHTML('beforeend',ILLUSTRATIONS[value]||ILLUSTRATIONS.general);
 }
+function renderTable(table){
+ const figure=node('figure','data-table');const wrap=node('div','tablewrap');const t=node('table');
+ const head=node('thead'),hr=node('tr');table.headers.forEach(h=>{const th=node('th',null,h);th.scope='col';hr.append(th)});head.append(hr);
+ const body=node('tbody');table.rows.forEach(r=>{const tr=node('tr');r.forEach((c,j)=>{const cell=node(j===0?'th':'td',null,c);if(j===0)cell.scope='row';tr.append(cell)});body.append(tr)});
+ t.append(head,body);wrap.append(t);figure.append(wrap);if(table.caption)figure.append(node('figcaption',null,table.caption));return figure;
+}
 function renderImage(image){
  const figure=node('figure','media'+(image.fit==='cover'?' fit-cover':''));const img=node('img');img.src=image.src;img.alt=image.alt||'';img.decoding='async';figure.append(img);
  if(image.caption)figure.append(node('figcaption',null,image.caption));
@@ -63,7 +69,9 @@ if(slide.type==='cover'){
 root.append(title);if(slide.subtitle)root.append(node('p','lead subtitle',slide.subtitle));
 const split=slide.image&&slide.layout==='split';
 const content=split?node('div','split-text'):root;
-if(slide.body){const body=node('div','body');paragraphs(slide.body,body);content.append(body)}if(slide.bullets){const list=node('ul','bullets');slide.bullets.forEach(item=>list.append(node('li',null,item)));content.append(list)}
+if(slide.body){const body=node('div','body');paragraphs(slide.body,body);content.append(body)}
+if(slide.table)content.append(renderTable(slide.table));
+if(slide.bullets){const list=node('ul','bullets');slide.bullets.forEach(item=>list.append(node('li',null,item)));content.append(list)}
 if(slide.code)content.append(node('pre','snip code-example',slide.code));
 if(split){const wrap=node('div','split');wrap.append(content,renderImage(slide.image));root.append(wrap)}else if(slide.image)root.append(renderImage(slide.image));
 if(slide.callout)root.append(node('aside','hand callout',slide.callout));

@@ -85,7 +85,7 @@ def hyperlinks(shape):
         address = shape.click_action.hyperlink.address
         if address:
             links.append({'text': shape.name, 'url': address})
-    except (AttributeError, KeyError, ValueError):
+    except (AttributeError, KeyError, ValueError, TypeError):  # los grupos no admiten click_action
         pass
     return links
 
@@ -136,7 +136,12 @@ def extract(path, Presentation, ctx):
     ctx = {**ctx, 'stem': Path(path).stem}
     for i, slide in enumerate(prs.slides, 1):
         counter = [0]
-        shapes = [describe(shape, i, counter, ctx, slide) for shape in iter_shapes(slide.shapes)]
+        shapes = []
+        for shape in iter_shapes(slide.shapes):
+            try:
+                shapes.append(describe(shape, i, counter, ctx, slide))
+            except Exception as e:  # una forma problemática no debe detener la extracción
+                shapes.append({'name': getattr(shape, 'name', '?'), 'error': f'{type(e).__name__}: {e}'})
         title = ''
         try:
             if slide.shapes.title is not None:

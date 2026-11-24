@@ -20,6 +20,8 @@ open(sys.argv[2], "wb").write(base64.b64decode(sys.argv[3]))
 pic = s.shapes.add_picture(sys.argv[2], Inches(1), Inches(2))
 pic._element.nvPicPr.cNvPr.set("descr", "Un píxel")
 s.notes_slide.notes_text_frame.text = "Notas del ponente"
+grp = s.shapes.add_group_shape()
+grp.shapes.add_textbox(Inches(1), Inches(5), Inches(2), Inches(1)).text_frame.text = "Dentro del grupo"
 box = s.shapes.add_textbox(Inches(5), Inches(2), Inches(3), Inches(1))
 run = box.text_frame.paragraphs[0].add_run()
 run.text = "Fuente"
@@ -59,6 +61,7 @@ class ExtractTest(unittest.TestCase):
             self.assertEqual((folder / image['src']).read_bytes(), base64.b64decode(PIXEL))
             links = [l for sh in slide['shapes'] for l in sh.get('links', [])]
             self.assertIn({'text': 'Fuente', 'url': 'https://example.org/fuente'}, links)
+            self.assertIn('Dentro del grupo', [sh.get('text') for sh in slide['shapes']])  # grupos: sin fallo y recorridos
             self.assertFalse(slide['hidden'])
             second = data['sources'][0]['slides'][1]
             self.assertTrue(second['hidden'])

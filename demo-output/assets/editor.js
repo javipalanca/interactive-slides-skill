@@ -62,6 +62,7 @@ function deckErrors(deck){
   if(s.layout!==undefined&&!LAYOUTS.includes(s.layout))errors.push(label+': layout no válido: '+s.layout);
   if(s.image!==undefined&&(!s.image||!isText(s.image.alt)||typeof s.image.src!=='string'||!IMAGE_URI.test(s.image.src)||s.image.src.length>MAX_DATA_URI||(s.image.caption!==undefined&&typeof s.image.caption!=='string')))errors.push(label+': image necesita src en Base64 (PNG, JPEG, WebP, GIF o SVG; ≤ 5 MiB) y alt no vacío');
   if(s.image&&s.image.fit!==undefined&&!['contain','cover'].includes(s.image.fit))errors.push(label+': image.fit debe ser contain o cover');
+  if(s.table!==undefined){const t=s.table,h=t?.headers;if(!t||!Array.isArray(h)||!h.length||h.some(x=>typeof x!=='string')||!Array.isArray(t.rows)||!t.rows.length||t.rows.some(r=>!Array.isArray(r)||r.length!==h.length||r.some(c=>typeof c!=='string'))||(t.caption!==undefined&&typeof t.caption!=='string'))errors.push(label+': table necesita headers (textos) y rows (filas de textos con tantas celdas como headers)')}
   if(s.illustration!==undefined&&!(typeof s.illustration==='string'&&(s.illustration==='none'||app().illustrations.includes(s.illustration)||(IMAGE_URI.test(s.illustration)&&s.illustration.length<=MAX_DATA_URI))))errors.push(label+': illustration debe ser una ilustración incluida, "none" o una imagen en Base64');
   if(s.type==='exercise'&&!s.exercise)errors.push(label+': exercise obligatorio');
   if(!s.exercise)return;
@@ -138,11 +139,14 @@ function updateImage(patch){const s=selectedSlide();if(!s?.image)return;app().up
 
 /* ---------- Desbordamiento: el lienzo 16:9 no se desplaza, así que el contenido debe caber ---------- */
 const isMobile=()=>matchMedia('(max-width:760px)').matches;
-function overflows(){const el=document.querySelector('#stage .slide');return !!el&&!isMobile()&&(el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2)}
-function flagOverflow(){const bad=overflows();$('overflowWarning').hidden=!bad;$('overflowWarning').title=bad?'El contenido no cabe en el lienzo 16:9: divide la diapositiva o reduce el texto.':''}
-function overflowingSlides(){
+const clipped=el=>el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2;
+/* Cuenta también los bloques con desplazamiento propio (código, tablas): si no caben, aparece una barra dentro del lienzo. */
+function overflows(){const el=document.querySelector('#stage .slide');return !!el&&!isMobile()&&(clipped(el)||[...el.querySelectorAll('pre,.tablewrap')].some(clipped))}
+const imagesReady=()=>Promise.all([...document.querySelectorAll('#stage img')].map(i=>i.decode().catch(()=>{})));
+async function flagOverflow(){await imagesReady();const bad=overflows();$('overflowWarning').hidden=!bad;$('overflowWarning').title=bad?'El contenido no cabe en el lienzo 16:9: divide la diapositiva o reduce el texto.':''}
+async function overflowingSlides(){
  if(isMobile())return null;const current=app().getCurrentSlide()?.id;const bad=[];
- app().getDeck().slides.forEach((s,i)=>{if(s.disabled)return;app().goToSlideId(s.id);if(overflows())bad.push(`${i+1}. ${s.title}`)});
+ for(const [i,s] of app().getDeck().slides.entries()){if(s.disabled)continue;app().goToSlideId(s.id);await imagesReady();if(overflows())bad.push(`${i+1}. ${s.title}`)}
  if(current)app().goToSlideId(current);return bad;
 }
 
@@ -163,6 +167,9 @@ function enableInline(){
      slide[key][i]=v;
    }));
  edit($('stage').querySelector('figure.media figcaption'),v=>slide.image.caption=v);
+ edit($('stage').querySelector('figure.data-table figcaption'),v=>slide.table.caption=v);
+ $('stage').querySelectorAll('figure.data-table thead th').forEach((el,j)=>edit(el,v=>slide.table.headers[j]=v));
+ $('stage').querySelectorAll('figure.data-table tbody tr').forEach((tr,i)=>tr.querySelectorAll('th,td').forEach((el,j)=>edit(el,v=>slide.table.rows[i][j]=v)));
  edit($('stage').querySelector('.prompt'),v=>slide.exercise.prompt=v);
  $('stage').querySelectorAll('.option span').forEach((el,i)=>edit(el,v=>slide.exercise.options[i].label=v));
  edit($('notesBody'),v=>slide.notes=v);
@@ -217,7 +224,7 @@ const button=$('publishBtn');button.disabled=true;button.textContent='Preparando
   // Guard against accidental dependencies on remote or local paths in author content.
   const linked=base.querySelectorAll('link[href],script[src],img[src]:not([src^="data:"]),iframe[src],video[src],audio[src],source[src]');if(linked.length)throw Error('Quedan referencias externas o recursos sin incrustar.');
   const html='<!doctype html>\n'+base.outerHTML;download(filename()+'-definitiva.html',html,'text/html;charset=utf-8');
-  const bad=overflowingSlides();message(`HTML publicado: ${enabled.length} diapositivas activas, sin controles ni código de edición.`+(bad?.length?` Atención, desbordan el lienzo: ${bad.join('; ')}.`:''));
+  const bad=await overflowingSlides();message(`HTML publicado: ${enabled.length} diapositivas activas, sin controles ni código de edición.`+(bad?.length?` Atención, desbordan el lienzo: ${bad.join('; ')}.`:''));
 }catch(e){message('No se pudo generar el HTML: '+e.message);console.error(e)}finally{button.disabled=false;button.textContent='Generar HTML definitivo'}}
 
 function bind(){
@@ -233,7 +240,7 @@ function bind(){
   $('imageAlt').addEventListener('change',()=>updateImage({alt:$('imageAlt').value.trim()||'Imagen'}));
   $('imageCaption').addEventListener('change',()=>{const c=$('imageCaption').value.trim();updateImage({caption:c||undefined})});
   $('imageCover').addEventListener('change',()=>updateImage({fit:$('imageCover').checked?'cover':undefined}));
-  $('overflowCheckBtn').addEventListener('click',()=>{const bad=overflowingSlides();message(bad===null?'Revisa los desbordamientos en una pantalla de escritorio.':bad.length?'Diapositivas que desbordan el lienzo: '+bad.join('; ')+'. Divídelas o reduce el contenido.':'Ninguna diapositiva activa desborda el lienzo.')});
+  $('overflowCheckBtn').addEventListener('click',async()=>{message('Revisando…');const bad=await overflowingSlides();message(bad===null?'Revisa los desbordamientos en una pantalla de escritorio.':bad.length?'Diapositivas que desbordan el lienzo: '+bad.join('; ')+'. Divídelas o reduce el contenido.':'Ninguna diapositiva activa desborda el lienzo.')});
   $('imageSplit').addEventListener('change',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{layout:$('imageSplit').checked?'split':undefined});save();populate()});
   $('imageRemove').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{image:undefined,layout:s.layout==='split'?undefined:s.layout});save();populate()});
   $('exerciseApply').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;try{const text=$('exerciseJson').value.trim();const ex=text?JSON.parse(text):undefined;if(!ex&&s.type==='exercise')throw Error('una diapositiva de tipo exercise necesita ejercicio');if(ex){const errors=exerciseErrors(ex,'ejercicio');const clash=app().getDeck().slides.some(o=>o.id!==s.id&&o.exercise?.id===ex.id);if(clash)errors.push('exercise.id repetido '+ex.id);if(errors.length)throw Error(errors.join('; '))}app().updateSlide(s.id,{exercise:ex});save();populate();message('Ejercicio actualizado.')}catch(e){message('Ejercicio no válido: '+e.message)}});

@@ -24,9 +24,10 @@ Tipos de slide: `cover` (subtitle, illustration), `section` (subtitle), `content
 - `chapter`, `eyebrow`, `notes`, `solution` (texto libre que no se muestra inicialmente).
 - `code`: bloque de código preformateado.
 - `image`: `{ "src", "alt", "caption"?, "fit"? }`. PNG, JPEG, WebP, GIF o SVG de hasta 5 MiB. `alt` es obligatorio y debe describir lo que aporta la imagen; `caption` es un pie opcional (úsalo para atribuir la fuente). `fit`: `contain` (por defecto: muestra la imagen entera; úsalo en diagramas, capturas, gráficos y logotipos) o `cover` (recorta para llenar el marco; solo fotografías).
+- `table`: `{ "headers": [...], "rows": [[...], ...], "caption"? }`. Tabla de texto plano: cada fila tiene tantas celdas como cabeceras y la primera celda de cada fila actúa como cabecera de fila. Úsala para comparaciones (plataformas, ventajas/inconvenientes); máximo orientativo de 6 filas × 5 columnas para que quepa. Se edita celda a celda con **✎ Editar**.
 - `layout`: `"cards"` muestra las viñetas como tarjetas; `"split"` coloca texto e imagen en dos columnas (requiere `image`).
 
-Las claves `id` deben ser estables y únicas. Todo el texto se inserta como texto plano, no como HTML.
+Orden de dibujo en la diapositiva: `eyebrow`, `title`, `subtitle`, `body`, `table`, `bullets`, `code`, `image` (a la derecha con `layout: "split"`), `callout`. Las claves `id` deben ser estables y únicas. Todo el texto se inserta como texto plano, no como HTML.
 
 ### Ilustración de portada (`illustration`)
 

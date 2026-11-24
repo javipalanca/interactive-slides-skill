@@ -128,6 +128,15 @@ def validate_content(deck):
                 errors.append(label + ': image necesita src en Base64 (PNG, JPEG, WebP, GIF o SVG; ≤ 5 MiB) y alt no vacío')
             if isinstance(img, dict) and img.get('fit', 'contain') not in ('contain', 'cover'):
                 errors.append(label + ': image.fit debe ser contain o cover')
+        if 'table' in s:
+            t = s['table']
+            headers = t.get('headers') if isinstance(t, dict) else None
+            rows = t.get('rows') if isinstance(t, dict) else None
+            if (not isinstance(headers, list) or not headers or any(not isinstance(h, str) for h in headers)
+                    or not isinstance(rows, list) or not rows
+                    or any(not isinstance(r, list) or len(r) != len(headers) or any(not isinstance(c, str) for c in r) for r in rows)
+                    or not isinstance(t.get('caption', ''), str)):
+                errors.append(label + ': table necesita headers (textos) y rows (filas de textos con tantas celdas como headers)')
         if 'illustration' in s:
             ill = s['illustration']
             if not (isinstance(ill, str) and (ill in ILLUSTRATIONS or _data_uri(ill, IMAGE_URI))):

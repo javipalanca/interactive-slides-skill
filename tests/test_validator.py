@@ -70,6 +70,7 @@ class TestValidation(unittest.TestCase):
             'theme': lambda d: d['meta'].update(theme='sepia'),
             'slideSize': lambda d: d['meta'].update(slideSize=120),
             'layout': lambda d: d['slides'][3].update(layout='mosaic'),
+            'table ragged': lambda d: d['slides'][2].update(table={'headers': ['A', 'B'], 'rows': [['1']]}),
         }
         for name, mutate in cases.items():
             with self.subTest(name), tempfile.TemporaryDirectory() as temp:
@@ -83,6 +84,7 @@ class TestValidation(unittest.TestCase):
     def test_validate_content_accepts_meta_options(self):
         d = demo()
         d['slides'] = [s for s in d['slides'] if 'image' not in s]
+        d['slides'][2]['table'] = {'headers': ['Plataforma', 'Lenguaje'], 'rows': [['SPADE', 'Python']], 'caption': 'Ejemplo'}
         for theme in ('light', 'dark', 'auto'):
             d['meta'].update(theme=theme, slideSize=50)
             self.assertEqual([], validate_content(d))
