@@ -5,7 +5,8 @@
     "subtitle": "Microtaller de razonamiento científico",
     "duration": "20 min",
     "language": "es",
-    "theme": "light"
+    "theme": "light",
+    "slideSize": 85
   },
   "slides": [
     {
@@ -15,7 +16,8 @@
       "eyebrow": "Microtaller interactivo",
       "title": "Aprender con experimentos",
       "subtitle": "De una hipótesis a una conclusión comprobable",
-      "notes": "Presenta la pregunta central: ¿cómo sabemos si una explicación es correcta?"
+      "notes": "Presenta la pregunta central: ¿cómo sabemos si una explicación es correcta?",
+      "illustration": "ciencia"
     },
     {
       "id": "agenda",
@@ -47,6 +49,26 @@
       ],
       "callout": "Una correlación no demuestra por sí sola causalidad.",
       "notes": "Pide a alguien un ejemplo de variable de confusión."
+    },
+    {
+      "id": "ciclo",
+      "type": "content",
+      "chapter": "Conceptos",
+      "eyebrow": "Proceso",
+      "title": "El experimento cierra un ciclo",
+      "layout": "split",
+      "bullets": [
+        "Una pregunta concreta",
+        "Una hipótesis contrastable",
+        "Un experimento controlado",
+        "Una conclusión que abre nuevas preguntas"
+      ],
+      "image": {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgMzYwIiBmb250LWZhbWlseT0iU291cmNlIFNhbnMgMywgU2Vnb2UgVUksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjIiPgogIDx0aXRsZT5DaWNsbyBkZWwgbcOpdG9kbyBleHBlcmltZW50YWw8L3RpdGxlPgogIDxkZWZzPjxtYXJrZXIgaWQ9ImEiIHZpZXdCb3g9IjAgMCAxMCAxMCIgcmVmWD0iOSIgcmVmWT0iNSIgbWFya2VyV2lkdGg9IjciIG1hcmtlckhlaWdodD0iNyIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNMCAwTDEwIDVMMCAxMHoiIGZpbGw9IiNFODU5MEMiLz48L21hcmtlcj48L2RlZnM+CiAgPGcgZmlsbD0iI0ZGRjRFOCIgc3Ryb2tlPSIjMUMyMzMzIiBzdHJva2Utd2lkdGg9IjIuNSI+CiAgICA8cmVjdCB4PSIyMzAiIHk9IjIwIiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjY0IiByeD0iMTQiLz4KICAgIDxyZWN0IHg9IjQ0MCIgeT0iMTQ4IiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjY0IiByeD0iMTQiLz4KICAgIDxyZWN0IHg9IjIzMCIgeT0iMjc2IiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjY0IiByeD0iMTQiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIxNDgiIHdpZHRoPSIxODAiIGhlaWdodD0iNjQiIHJ4PSIxNCIvPgogIDwvZz4KICA8ZyBmaWxsPSIjMUMyMzMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgIDx0ZXh0IHg9IjMyMCIgeT0iNjAiPlByZWd1bnRhPC90ZXh0PgogICAgPHRleHQgeD0iNTMwIiB5PSIxODgiPkhpcMOzdGVzaXM8L3RleHQ+CiAgICA8dGV4dCB4PSIzMjAiIHk9IjMxNiI+RXhwZXJpbWVudG88L3RleHQ+CiAgICA8dGV4dCB4PSIxMTAiIHk9IjE4OCI+Q29uY2x1c2nDs248L3RleHQ+CiAgPC9nPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4NTkwQyIgc3Ryb2tlLXdpZHRoPSIzIiBtYXJrZXItZW5kPSJ1cmwoI2EpIj4KICAgIDxwYXRoIGQ9Ik00MTAgNjBxOTAgMTAgMTE1IDgyIi8+CiAgICA8cGF0aCBkPSJNNTMwIDIxNHEtMjAgNzAtMTE2IDkyIi8+CiAgICA8cGF0aCBkPSJNMjI4IDMwNnEtOTYtMjAtMTE2LTkwIi8+CiAgICA8cGF0aCBkPSJNMTEyIDE0NnEyMC03MCAxMTQtOTAiLz4KICA8L2c+Cjwvc3ZnPgo=",
+        "alt": "Diagrama circular: pregunta, hipótesis, experimento y conclusión, que vuelve a la pregunta.",
+        "caption": "El ciclo se repite: cada conclusión genera preguntas nuevas."
+      },
+      "notes": "Recorre el ciclo con un ejemplo cotidiano."
     },
     {
       "id": "pregunta-1",

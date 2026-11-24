@@ -1,5 +1,8 @@
-# Presentación de demostración (borrador editable)
+# Aprender con experimentos
 
-Desde esta carpeta ejecuta `python3 -m http.server 8000` y visita `http://localhost:8000`.
+Borrador editable de la presentación. **Abre `index.html` directamente** (doble clic): funciona sin servidor web y sin Internet.
 
-Pulsa **✎ Editar** para modificar contenidos y desactivar slides; pulsa **Generar HTML definitivo** para descargar un único HTML offline, sin editor ni diapositivas desactivadas. Exporta también un borrador JSON si quieres conservar los cambios.
+- **✎ Editar**: corrige títulos, párrafos, viñetas, destacados y notas directamente sobre la diapositiva.
+- **Gestionar**: tamaño de la diapositiva, tema por defecto, logos, ilustración de portada, imagen de cada diapositiva, activar/desactivar diapositivas y JSON del ejercicio.
+- **Descargar borrador JSON** guarda los cambios fuera del navegador; para incorporarlos a esta carpeta, regenera con `create_deck.py --content borrador.json --output esta-carpeta --force`.
+- **Generar HTML definitivo** descarga un único `.html` autocontenido, sin editor ni diapositivas desactivadas.

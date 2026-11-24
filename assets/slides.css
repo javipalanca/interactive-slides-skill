@@ -789,3 +789,13 @@ button{border:1px solid var(--line);background:var(--card);border-radius:6px;pad
 #indexList button[aria-current=true]{background:var(--orange-soft);outline:1px solid var(--orange)}
 #presentationLogos img{max-width:90px;max-height:34px;object-fit:contain}.sr-only{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 @media(max-width:760px){#nav{display:flex;height:auto;flex-wrap:wrap;padding:.4rem}.slide{margin-bottom:5rem}#notesPanel:not([hidden]){display:block}}
+/* Imágenes de diapositiva, ilustraciones de portada y tema */
+.slide figure.media{margin:.4em 0;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em}
+.slide figure.media img{flex:1 1 auto;min-height:0;max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.slide figure.media figcaption{font-size:.62em;color:var(--muted);text-align:center}
+.slide .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;flex:1 1 auto;min-height:0;align-items:center}
+.slide .split figure.media{height:100%;margin:0}
+img.doodle.cover-art{right:70px;top:56px;width:320px;height:270px;object-fit:contain}
+svg.doodle.cover-art{right:70px;top:56px}
+#nav #themeBtn{min-width:40px;justify-content:center}
+@media(max-width:760px){.slide .split{grid-template-columns:1fr}.slide figure.media img{max-height:50vh}}

@@ -1,21 +1,20 @@
 # Edición in situ y publicación de una versión autónoma
 
-1. Genera la carpeta de borrador con `create_deck.py` y abre `index.html` directamente. Pulsa **✎ Editar**. Si el navegador restringe `file://`, sirve la carpeta por HTTP.
-2. Corrige texto directamente en títulos, párrafos, viñetas o destacados. Al perder foco, el cambio se escribe en el modelo. El panel permite editar texto de campos completos, notas del ponente y JSON del ejercicio.
-3. En el selector aparecen **todas** las diapositivas, incluso las desactivadas. Desmarca «Incluir esta diapositiva» para excluirla de navegación, índice y versión final; vuelve a marcar para restaurarla. Se impide ocultar la última activa.
-4. Guarda el borrador descargando el JSON. Los cambios también se almacenan automáticamente en `localStorage` del mismo navegador y origen. Para llevar los cambios a otra máquina, importa el JSON o reemplaza `assets/content.json` y regenera.
-5. Pulsa **Generar HTML definitivo**. Se descargarán `ID-definitiva.html` con CSS, JavaScript, contenido JSON y HTML en un fichero sin código editor. **Comprueba abriendo el HTML localmente**: debe funcionar incluso desde `file://`, sin red ni carpeta `assets/`.
-6. Las diapositivas desactivadas se eliminan del contenido final, no se dejan ocultas. El progreso de ejercicios se identifica por ID en `localStorage`; dependiendo del navegador, `file://` puede limitar esa persistencia, pero no impide la interacción.
+1. Genera la carpeta de borrador con `uv run --script scripts/create_deck.py ...` y **abre `index.html` directamente** (doble clic). No hace falta servidor web: el contenido y los recursos van incrustados.
+2. Pulsa **✎ Editar** y corrige directamente sobre la diapositiva títulos, subtítulos, párrafos, viñetas, destacados, código, pies de imagen, enunciados y opciones de ejercicios. Las notas del ponente se editan en el panel de notas (`N`). Cada cambio se escribe en el modelo JSON.
+3. Pulsa **Gestionar** para abrir el panel lateral:
+   - **Presentación**: tamaño de la diapositiva (porcentaje del espacio de pantalla, 85 % por defecto) y tema por defecto (claro, oscuro o según el sistema).
+   - **Logotipos**: hasta tres, con texto alternativo.
+   - **Diapositiva**: el selector muestra **todas** las diapositivas, incluso las desactivadas. Desmarca «Incluir esta diapositiva» para excluirla de navegación, índice y versión final; vuelve a marcarla para restaurarla. Se impide ocultar la última activa. En portadas, elige la ilustración incluida o sube una propia. En cualquier diapositiva puedes añadir, sustituir o quitar una imagen, su texto alternativo, su pie y la disposición en dos columnas.
+   - **Configuración avanzada (ejercicio)**: JSON del ejercicio; se valida al aplicarlo con las mismas reglas que `validate_deck.py`.
+4. Guarda el borrador descargando el JSON. Los cambios también se almacenan automáticamente en `localStorage` del mismo navegador. Para llevarlos a otra máquina, importa el JSON desde el editor o regenera la carpeta con `create_deck.py --content borrador.json --output carpeta --force`. Sustituir solo `assets/content.json` no basta: el contenido va incrustado en `index.html`.
+5. Pulsa **Generar HTML definitivo**. El editor valida el contenido y descarga `ID-definitiva.html` con CSS, JavaScript, contenido JSON e imágenes en un fichero, sin código de editor. **Compruébalo abriéndolo directamente**: debe funcionar sin red ni carpeta `assets/`.
+6. Las diapositivas desactivadas se eliminan del contenido final, no se dejan ocultas. El progreso de ejercicios y la preferencia de tema se guardan en `localStorage` por ID; dependiendo del navegador, `file://` puede limitar esa persistencia, pero no impide la interacción.
 
 ## Restricciones técnicas
 
-- El exportador incluido es autocontenido para presentaciones de texto, bullets y ejercicios generados por esta skill. No se debe introducir dependencia externa sin ampliar el exportador para incrustarla.
-- Si personalizas CSS o JS, mantenlos en `assets/`; `create_deck.py` incorpora una copia local en el borrador para permitir la publicación desde `file://`. No permitas `@import`, `url(...)` remoto o fuentes externas sin incrustar. Los recursos multimedia requieren un convertidor a `data:` o una validación que bloquee publicar.
-- `assets/editor.js` y `assets/editor.css` pertenecen solo al borrador y deben ser eliminados, junto a su panel, botones y sus atributos, del HTML publicado.
+- El exportador incluido es autocontenido para texto, viñetas, código, ejercicios, logos, imágenes e ilustraciones. Vídeo, audio u otras bibliotecas no están soportados: no introduzcas dependencias externas sin ampliar el exportador para incrustarlas.
+- Si personalizas CSS o JS, mantenlos en `assets/` y regenera el borrador: `create_deck.py` incorpora una copia local para poder publicar desde `file://`. No permitas `@import`, `url(...)` remoto o fuentes externas sin incrustar; el exportador rechaza publicar en ese caso.
+- `assets/editor.js` y `assets/editor.css` pertenecen solo al borrador y se eliminan, junto a su panel y sus botones, del HTML publicado.
 - El JSON de ejercicios y sus respuestas queda accesible dentro del HTML; nunca usar como sistema de examen seguro.
-- Antes de publicar, valida el JSON de los ejercicios (tipo, IDs, opciones, respuestas, tolerancias) con `validate_deck.py` sobre el borrador sincronizado a disco o validación equivalente en el navegador.
-
-
-## Logotipos y exportación autosuficiente
-
-En el editor, sección «Logotipos», añade o retira hasta tres archivos PNG/JPEG/WebP/GIF (máximo 5 MiB cada uno), configura el texto alternativo y observa el resultado inmediatamente en la cabecera. El navegador convierte cada logo a Base64 al cargarlo. La ausencia total de logos no deja separación. Al exportar se validan los datos y se genera un fichero final con las imágenes embebidas en el JSON; el motor público las reproduce sin editor ni rutas externas. Las imágenes fuente declaradas por ruta en el JSON de entrada se convierten automáticamente con `create_deck.py`.
+- Las reglas de validación están replicadas en `scripts/validate_deck.py` y en `assets/editor.js`; el editor las aplica al importar, al aplicar un ejercicio y al publicar.

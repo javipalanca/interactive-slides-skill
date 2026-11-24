@@ -5,9 +5,86 @@ const $=id=>document.getElementById(id);
 const app=()=>window.SlidesApp;
 let selected=null;
 let originalDeck=null;
-const editedFields=['slideTitle','slideSubtitle','slideBody','slideBullets','slideCallout','slideNotes'];
-const MAX_LOGO_BYTES=5*1024*1024;
-const ALLOWED_LOGOS=new Set(['image/png','image/jpeg','image/webp','image/gif']);
+const MAX_FILE_BYTES=5*1024*1024;
+const MAX_DATA_URI=Math.ceil(MAX_FILE_BYTES*4/3)+128;
+const LOGO_TYPES=new Set(['image/png','image/jpeg','image/webp','image/gif']);
+const IMAGE_TYPES=new Set([...LOGO_TYPES,'image/svg+xml']);
+const LOGO_URI=/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
+const IMAGE_URI=/^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$/;
+const ILLUSTRATION_LABELS={general:'General (cuaderno)',ciencia:'Ciencia (laboratorio)',programacion:'Programación (código)',datos:'Datos (gráfica)',agentes:'Agentes',matematicas:'Matemáticas',comunicacion:'Comunicación (diálogo)'};
+
+/* ---------- Validación: mismas reglas que scripts/validate_deck.py ---------- */
+const TYPES=['cover','section','content','exercise','summary'];
+const QTYPES=['single','multiple','text','number'];
+const LAYOUTS=['','cards','split'];
+const isText=v=>typeof v==='string'&&v.trim().length>0;
+const isNum=v=>typeof v==='number'&&Number.isFinite(v);
+function exerciseErrors(ex,label){
+ const errors=[];
+ if(!ex||typeof ex!=='object'||Array.isArray(ex))return [label+': exercise debe ser objeto'];
+ if(!isText(ex.id))errors.push(label+': exercise.id vacío');
+ if(!QTYPES.includes(ex.type))return errors.concat(label+': tipo de ejercicio no soportado');
+ if(!isText(ex.prompt))errors.push(label+': prompt ausente');
+ if(!isText(ex.explanation))errors.push(label+': explanation ausente');
+ if(ex.type==='single'||ex.type==='multiple'){
+  const opts=Array.isArray(ex.options)?ex.options:[];
+  const values=opts.filter(o=>o&&typeof o==='object').map(o=>o.value);
+  if(values.length<2||new Set(values).size!==values.length||values.some(v=>typeof v!=='string'))errors.push(label+': opciones inválidas o duplicadas');
+  if(!Array.isArray(ex.options)||opts.some(o=>!o||typeof o!=='object'||!o.label))errors.push(label+': etiquetas de opciones ausentes');
+  if(ex.type==='single'&&(typeof ex.answer!=='string'||!values.includes(ex.answer)))errors.push(label+': answer debe ser una opción válida');
+  if(ex.type==='multiple'&&(!Array.isArray(ex.answer)||!ex.answer.length||ex.answer.some(a=>!values.includes(a))||new Set(ex.answer).size!==ex.answer.length))errors.push(label+': answer debe ser una lista de opciones válidas y únicas');
+ }else if(ex.type==='text'){
+  if(!(typeof ex.answer==='string'||(Array.isArray(ex.answer)&&ex.answer.length&&ex.answer.every(a=>typeof a==='string'))))errors.push(label+': respuesta textual no válida');
+ }else if(ex.type==='number'){
+  if(!isNum(ex.answer))errors.push(label+': answer debe ser numérico');
+  const t=ex.tolerance??0;if(!isNum(t)||t<0)errors.push(label+': tolerance debe ser numérica y >= 0');
+ }
+ const m=ex.minutes??0;if(!isNum(m)||m<0)errors.push(label+': minutes debe ser >= 0');
+ return errors;
+}
+function deckErrors(deck){
+ const errors=[];const meta=deck?.meta;
+ if(!meta||typeof meta!=='object'||!isText(meta.id)||!isText(meta.title))errors.push('meta.id y meta.title deben ser textos no vacíos');
+ const logos=meta?.logos??[];
+ if(!Array.isArray(logos)||logos.length>3)errors.push('meta.logos debe contener entre 0 y 3 logos');
+ else logos.forEach((l,i)=>{if(!l||!isText(l.alt)||typeof l.src!=='string'||!LOGO_URI.test(l.src)||l.src.length>MAX_DATA_URI)errors.push(`logo ${i+1}: src debe ser Base64 (≤ 5 MiB) y alt texto no vacío`)});
+ if(meta?.theme!==undefined&&!['light','dark','auto'].includes(meta.theme))errors.push('meta.theme debe ser light, dark o auto');
+ if(meta?.slideSize!==undefined&&(!isNum(meta.slideSize)||meta.slideSize<50||meta.slideSize>100))errors.push('meta.slideSize debe ser un número entre 50 y 100');
+ const slides=deck?.slides;
+ if(!Array.isArray(slides)||!slides.length)return errors.concat('slides debe ser un array no vacío');
+ const ids=new Set(),exids=new Set();
+ slides.forEach((s,i)=>{
+  const label='slide '+(i+1);
+  if(!s||typeof s!=='object'){errors.push(label+': debe ser un objeto');return}
+  if(!isText(s.id))errors.push(label+': id no válido');else if(ids.has(s.id))errors.push(label+': id repetido '+s.id);else ids.add(s.id);
+  if(!isText(s.title))errors.push(label+': falta title');
+  if(!TYPES.includes(s.type))errors.push(label+': type no válido: '+s.type);
+  if(s.layout!==undefined&&!LAYOUTS.includes(s.layout))errors.push(label+': layout no válido: '+s.layout);
+  if(s.image!==undefined&&(!s.image||!isText(s.image.alt)||typeof s.image.src!=='string'||!IMAGE_URI.test(s.image.src)||s.image.src.length>MAX_DATA_URI||(s.image.caption!==undefined&&typeof s.image.caption!=='string')))errors.push(label+': image necesita src en Base64 (PNG, JPEG, WebP, GIF o SVG; ≤ 5 MiB) y alt no vacío');
+  if(s.illustration!==undefined&&!(typeof s.illustration==='string'&&(s.illustration==='none'||app().illustrations.includes(s.illustration)||(IMAGE_URI.test(s.illustration)&&s.illustration.length<=MAX_DATA_URI))))errors.push(label+': illustration debe ser una ilustración incluida, "none" o una imagen en Base64');
+  if(s.type==='exercise'&&!s.exercise)errors.push(label+': exercise obligatorio');
+  if(!s.exercise)return;
+  errors.push(...exerciseErrors(s.exercise,label));
+  const eid=s.exercise.id;if(isText(eid)){if(exids.has(eid))errors.push(label+': exercise.id repetido '+eid);else exids.add(eid)}
+ });
+ return errors;
+}
+
+/* ---------- Utilidades ---------- */
+function selectedSlide(){return app()?.getDeck()?.slides.find(s=>s.id===selected)}
+function save(){const deck=app().getDeck();try{localStorage.setItem('interactive-editor:'+deck.meta.id,JSON.stringify(deck));message('Cambios guardados en este navegador.')}catch(e){message('No se pudo guardar automáticamente. Descarga el borrador JSON.')}}
+function message(msg){$('editorMessage').textContent=msg}
+function download(filename,content,mime){const blob=new Blob([content],{type:mime});const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),10000)}
+function filename(){return (app().getDeck().meta.id||'presentacion').replace(/[^a-z0-9_-]/gi,'-')}
+function readAsDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(Error('No se puede leer '+file.name));reader.onload=()=>resolve(reader.result);reader.readAsDataURL(file)})}
+async function readImage(file,allowed){
+ if(!allowed.has(file.type))throw Error('Formato no admitido: '+file.name);
+ if(file.size>MAX_FILE_BYTES)throw Error('Archivo demasiado grande (máximo 5 MiB): '+file.name);
+ return readAsDataURL(file);
+}
+const baseName=file=>file.name.replace(/\.[^.]+$/,'');
+
+/* ---------- Logos ---------- */
 function logos(){return app().getDeck().meta.logos||[]}
 function renderLogoEditor(){
  const container=$('logoEditorList');container.replaceChildren();
@@ -21,23 +98,44 @@ function renderLogoEditor(){
   row.append(img,input,remove);container.append(row)
  });
 }
-function readAsDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(Error('No se puede leer '+file.name));reader.onload=()=>resolve(reader.result);reader.readAsDataURL(file)})}
 async function uploadLogos(){
  const input=$('logoUpload'), files=[...input.files];input.value='';if(!files.length)return;
  if(logos().length+files.length>3){message('La presentación admite como máximo tres logos.');return}
  try{
   const newLogos=[];
-  for(const file of files){if(!ALLOWED_LOGOS.has(file.type))throw Error('Formato no admitido: '+file.name);if(file.size>MAX_LOGO_BYTES)throw Error('Logo demasiado grande (máximo 5 MiB): '+file.name);newLogos.push({src:await readAsDataURL(file),alt:file.name.replace(/\.[^.]+$/,'')})}
+  for(const file of files)newLogos.push({src:await readImage(file,LOGO_TYPES),alt:baseName(file)});
   app().updateLogos([...logos(),...newLogos]);save();renderLogoEditor();message('Logotipos añadidos y embebidos en el borrador.');
  }catch(e){message(e.message)}
 }
-const fields={slideTitle:'title',slideSubtitle:'subtitle',slideBody:'body',slideBullets:'bullets',slideCallout:'callout',slideNotes:'notes'};
-function selectedSlide(){return app()?.getDeck()?.slides.find(s=>s.id===selected)}
-function save(){const deck=app().getDeck();try{localStorage.setItem('interactive-editor:'+deck.meta.id,JSON.stringify(deck));message('Cambios guardados en este navegador.')}catch(e){message('No se pudo guardar automáticamente. Descarga el borrador JSON.')}}
-function message(msg){$('editorMessage').textContent=msg}
-function download(filename,content,mime){const blob=new Blob([content],{type:mime});const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),10000)}
-function filename(){return (app().getDeck().meta.id||'presentacion').replace(/[^a-z0-9_-]/gi,'-')}
-function populate(){const deck=app().getDeck(),list=$('slidePicker');list.replaceChildren();deck.slides.forEach((s,i)=>{const op=document.createElement('option');op.value=s.id;op.textContent=`${i+1}. ${s.disabled?'[Oculta] ':''}${s.title}`;list.append(op)});const s=selectedSlide();if(!s)return;list.value=s.id;$('slideEnabled').checked=!s.disabled;$('exerciseJson').value=s.exercise?JSON.stringify(s.exercise,null,2):'';renderLogoEditor()}
+
+/* ---------- Panel ---------- */
+function populate(){
+ const deck=app().getDeck(),list=$('slidePicker');list.replaceChildren();
+ deck.slides.forEach((s,i)=>{const op=document.createElement('option');op.value=s.id;op.textContent=`${i+1}. ${s.disabled?'[Oculta] ':''}${s.title}`;list.append(op)});
+ const size=deck.meta.slideSize??85;$('slideSize').value=size;$('slideSizeValue').textContent=size+'%';
+ $('defaultTheme').value=deck.meta.theme||'light';
+ renderLogoEditor();
+ const s=selectedSlide();if(!s)return;
+ list.value=s.id;$('slideEnabled').checked=!s.disabled;
+ $('exerciseJson').value=s.exercise?JSON.stringify(s.exercise,null,2):'';
+ $('coverOptions').hidden=s.type!=='cover';
+ if(s.type==='cover'){
+  const picker=$('illustrationPicker');picker.replaceChildren();
+  const options=[...app().illustrations.map(k=>[k,ILLUSTRATION_LABELS[k]||k]),['none','Sin ilustración']];
+  const value=s.illustration??'general';
+  if(value.startsWith('data:'))options.unshift(['custom','Ilustración propia']);
+  options.forEach(([v,l])=>{const op=document.createElement('option');op.value=v;op.textContent=l;picker.append(op)});
+  picker.value=value.startsWith('data:')?'custom':value;
+ }
+ const preview=$('imagePreview');preview.replaceChildren();
+ if(s.image){const img=document.createElement('img');img.src=s.image.src;img.alt='Vista previa';img.style.maxHeight='90px';img.style.objectFit='contain';preview.append(img)}
+ else{const p=document.createElement('p');p.className='logo-editor-empty';p.textContent='Esta diapositiva no tiene imagen.';preview.append(p)}
+ $('imageAlt').value=s.image?.alt||'';$('imageCaption').value=s.image?.caption||'';$('imageSplit').checked=s.layout==='split';
+ ['imageAlt','imageCaption','imageSplit','imageRemove'].forEach(id=>$(id).disabled=!s.image);
+}
+function updateImage(patch){const s=selectedSlide();if(!s?.image)return;app().updateSlide(s.id,{image:{...s.image,...patch}});save();populate()}
+
+/* ---------- Edición in situ ---------- */
 function enableInline(){
  const slide=app().getCurrentSlide();
  function edit(el,write){
@@ -53,6 +151,7 @@ function enableInline(){
      if(!Array.isArray(slide[key]))slide[key]=[slide[key]];
      slide[key][i]=v;
    }));
+ edit($('stage').querySelector('figure.media figcaption'),v=>slide.image.caption=v);
  edit($('stage').querySelector('.prompt'),v=>slide.exercise.prompt=v);
  $('stage').querySelectorAll('.option span').forEach((el,i)=>edit(el,v=>slide.exercise.options[i].label=v));
  edit($('notesBody'),v=>slide.notes=v);
@@ -64,6 +163,8 @@ function toggleEditor(){
  if(on){enableInline();$('stage').querySelector('h1,h2').focus()}
  else {document.querySelectorAll('[data-edit-field]').forEach(el=>{el.oninput=null;el.removeAttribute('contenteditable');delete el.dataset.editField});app().render()}
 }
+
+/* ---------- Publicación ---------- */
 function safeScript(s){return s.replace(/<\/script/gi,'<\\/script')}
 function publishedRuntime(source){
   // Remove the draft loader, local editorial state and editor API from the published runtime.
@@ -78,38 +179,12 @@ function publishedRuntime(source){
   source=source.replace(/window\.dispatchEvent\(new CustomEvent\('slides:render',[^;]+;\s*/g,'');
   return source;
 }
-function validateLogos(data){
- const logos=data.meta.logos||[];
- if(!Array.isArray(logos)||logos.length>3)throw Error('Debe haber entre cero y tres logos');
- for(const logo of logos){
-  if(!logo||typeof logo.src!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(logo.src))throw Error('Los logos deben estar incrustados en Base64 (PNG, JPEG, WebP o GIF).');
-  if(typeof logo.alt!=='string'||!logo.alt.trim())throw Error('Cada logo necesita texto alternativo');
-  if(logo.src.length>Math.ceil(MAX_LOGO_BYTES*4/3)+128)throw Error('Logo de tamaño excesivo');
- }
-}
-function validateForPublishing(slides){
-  const ids=new Set(),questions=new Set();
-  for(const s of slides){
-    if(!s.id||ids.has(s.id))throw Error('ID de diapositiva duplicado o vacío: '+s.id);
-    ids.add(s.id);
-    if(!s.title||!s.title.trim())throw Error('Diapositiva sin título: '+s.id);
-    const e=s.exercise;if(!e)continue;
-    if(!e.id||questions.has(e.id)||!['single','multiple','text','number'].includes(e.type)||!e.prompt)throw Error('Ejercicio inválido en '+s.id);
-    questions.add(e.id);
-    if(['single','multiple'].includes(e.type)){
-      const choices=new Set((e.options||[]).map(o=>o.value));
-      if(choices.size<2||choices.size!==(e.options||[]).length)throw Error('Opciones inválidas en '+s.id);
-      const answers=Array.isArray(e.answer)?e.answer:[e.answer];
-      if(!answers.length||answers.some(a=>!choices.has(a))||(e.type==='single'&&answers.length!==1))throw Error('Respuesta no disponible en '+s.id);
-    }
-    if(e.type==='text'&&(e.answer===undefined||e.answer===''))throw Error('Respuesta de texto ausente: '+s.id);
-    if(e.type==='number'&&(!Number.isFinite(Number(e.answer))||Number(e.tolerance??0)<0))throw Error('Respuesta numérica inválida: '+s.id);
-  }
-}
 async function publish(){const enabled=app().getDeck().slides.filter(s=>!s.disabled);if(!enabled.length){message('Debe existir al menos una diapositiva activa.');return}
 const button=$('publishBtn');button.disabled=true;button.textContent='Preparando HTML…';try{
-  validateForPublishing(enabled);validateLogos(app().getDeck());
+  const data=JSON.parse(JSON.stringify(app().getDeck()));data.slides=enabled.map(s=>{const out=JSON.parse(JSON.stringify(s));delete out.disabled;return out});
+  const errors=deckErrors(data);if(errors.length)throw Error(errors.slice(0,5).join('; ')+(errors.length>5?` (y ${errors.length-5} más)`:''));
   const base=document.documentElement.cloneNode(true);
+  base.removeAttribute('style');base.removeAttribute('data-theme');
   base.querySelectorAll('.editor-control,[data-editor-asset]').forEach(el=>el.remove());
   base.querySelector('#stage').replaceChildren();base.querySelector('#presentationLogos').replaceChildren();base.querySelector('#presentationLogos').hidden=true;
   base.querySelectorAll('[data-edit-field],[contenteditable]').forEach(el=>{el.removeAttribute('data-edit-field');el.removeAttribute('contenteditable')});
@@ -126,22 +201,31 @@ const button=$('publishBtn');button.disabled=true;button.textContent='Preparando
   const files=[bundle.css,bundle.exercises,bundle.slides];
   if(/@import\b|url\s*\(\s*(?!["']?data:)/i.test(files[0]))throw Error('El CSS contiene dependencias url() o @import; incrústalas antes de publicar');
   const css=document.createElement('style');css.textContent=files[0];cssLink.replaceWith(css);
-  const data=JSON.parse(JSON.stringify(app().getDeck()));data.slides=enabled.map(s=>{const out={...s};delete out.disabled;return out});
   const embedded=document.createElement('script');embedded.id='embedded-deck';embedded.type='application/json';embedded.textContent=JSON.stringify(data).replace(/</g,'\\u003c');base.querySelector('body').append(embedded);
   for(const js of [files[1],publishedRuntime(files[2])]){const script=document.createElement('script');script.textContent=safeScript(js);base.querySelector('body').append(script)}
   // Guard against accidental dependencies on remote or local paths in author content.
   const linked=base.querySelectorAll('link[href],script[src],img[src]:not([src^="data:"]),iframe[src],video[src],audio[src],source[src]');if(linked.length)throw Error('Quedan referencias externas o recursos sin incrustar.');
   const html='<!doctype html>\n'+base.outerHTML;download(filename()+'-definitiva.html',html,'text/html;charset=utf-8');message(`HTML publicado: ${enabled.length} diapositivas activas, sin controles ni código de edición.`);
 }catch(e){message('No se pudo generar el HTML: '+e.message);console.error(e)}finally{button.disabled=false;button.textContent='Generar HTML definitivo'}}
+
 function bind(){
   $('logoUpload').addEventListener('change',uploadLogos);
   $('editorBtn').addEventListener('click',()=>toggleEditor());$('manageBtn').onclick=()=>{selected=app().getCurrentSlide().id;populate();$('editorPanel').hidden=false};$('editorClose').onclick=()=>{$('editorPanel').hidden=true};
+  $('slideSize').addEventListener('input',()=>{const v=Number($('slideSize').value);$('slideSizeValue').textContent=v+'%';app().updateMeta({slideSize:v});save()});
+  $('defaultTheme').addEventListener('change',()=>{app().updateMeta({theme:$('defaultTheme').value});save()});
   $('slidePicker').addEventListener('change',()=>{selected=$('slidePicker').value;const s=selectedSlide();if(s&&!s.disabled)app().goToSlideId(s.id);populate()});
   $('slideEnabled').addEventListener('change',()=>{const s=selectedSlide();if(!s)return;const ok=app().setSlideEnabled(s.id,$('slideEnabled').checked);if(!ok){$('slideEnabled').checked=true;message('No puedes ocultar la última diapositiva activa.');return}save();populate()});
-  $('exerciseApply').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;try{const text=$('exerciseJson').value.trim();const ex=text?JSON.parse(text):null;if(ex&&(!ex.type||!ex.id))throw Error('Faltan type o id');app().updateSlide(s.id,{exercise:ex});save();populate();message('Ejercicio actualizado.')}catch(e){message('JSON de ejercicio inválido: '+e.message)}});
+  $('illustrationPicker').addEventListener('change',()=>{const s=selectedSlide();const v=$('illustrationPicker').value;if(!s||v==='custom')return;app().updateSlide(s.id,{illustration:v});save();populate()});
+  $('illustrationUpload').addEventListener('change',async()=>{const s=selectedSlide(),file=$('illustrationUpload').files[0];$('illustrationUpload').value='';if(!s||!file)return;try{app().updateSlide(s.id,{illustration:await readImage(file,IMAGE_TYPES)});save();populate();message('Ilustración propia incrustada.')}catch(e){message(e.message)}});
+  $('imageUpload').addEventListener('change',async()=>{const s=selectedSlide(),file=$('imageUpload').files[0];$('imageUpload').value='';if(!s||!file)return;try{const src=await readImage(file,IMAGE_TYPES);app().updateSlide(s.id,{image:{...(s.image||{}),src,alt:s.image?.alt||baseName(file)}});save();populate();message('Imagen incrustada. Revisa el texto alternativo.')}catch(e){message(e.message)}});
+  $('imageAlt').addEventListener('change',()=>updateImage({alt:$('imageAlt').value.trim()||'Imagen'}));
+  $('imageCaption').addEventListener('change',()=>{const c=$('imageCaption').value.trim();updateImage({caption:c||undefined})});
+  $('imageSplit').addEventListener('change',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{layout:$('imageSplit').checked?'split':undefined});save();populate()});
+  $('imageRemove').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{image:undefined,layout:s.layout==='split'?undefined:s.layout});save();populate()});
+  $('exerciseApply').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;try{const text=$('exerciseJson').value.trim();const ex=text?JSON.parse(text):undefined;if(!ex&&s.type==='exercise')throw Error('una diapositiva de tipo exercise necesita ejercicio');if(ex){const errors=exerciseErrors(ex,'ejercicio');const clash=app().getDeck().slides.some(o=>o.id!==s.id&&o.exercise?.id===ex.id);if(clash)errors.push('exercise.id repetido '+ex.id);if(errors.length)throw Error(errors.join('; '))}app().updateSlide(s.id,{exercise:ex});save();populate();message('Ejercicio actualizado.')}catch(e){message('Ejercicio no válido: '+e.message)}});
   $('saveDraftBtn').addEventListener('click',()=>download(filename()+'-borrador.json',JSON.stringify(app().getDeck(),null,2)+'\n','application/json'));
   $('loadDraftBtn').addEventListener('click',()=>$('loadDraftFile').click());
-  $('loadDraftFile').addEventListener('change',async()=>{const file=$('loadDraftFile').files[0];if(!file)return;try{const deck=JSON.parse(await file.text());if(deck.meta?.id!==originalDeck.meta.id)throw Error('El ID de la presentación no coincide');app().replaceDeck(deck);selected=app().getCurrentSlide().id;save();populate();message('Borrador importado.')}catch(e){message('No se pudo importar: '+e.message)}finally{$('loadDraftFile').value=''}});
+  $('loadDraftFile').addEventListener('change',async()=>{const file=$('loadDraftFile').files[0];if(!file)return;try{const deck=JSON.parse(await file.text());if(deck.meta?.id!==originalDeck.meta.id)throw Error('El ID de la presentación no coincide');const errors=deckErrors(deck);if(errors.length)throw Error(errors.slice(0,5).join('; '));app().replaceDeck(deck);selected=app().getCurrentSlide().id;save();populate();message('Borrador importado.')}catch(e){message('No se pudo importar: '+e.message)}finally{$('loadDraftFile').value=''}});
   $('resetDraftBtn').addEventListener('click',()=>{if(!confirm('¿Descartar todos los cambios locales y restaurar la presentación original?'))return;localStorage.removeItem('interactive-editor:'+originalDeck.meta.id);app().replaceDeck(JSON.parse(JSON.stringify(originalDeck)));selected=app().getCurrentSlide().id;populate();message('Presentación original restaurada.')});
   $('publishBtn').addEventListener('click',publish);
   window.addEventListener('slides:render',()=>{if(!$('editorPanel').hidden){const current=app().getCurrentSlide();if(current&&!selectedSlide()?.disabled)selected=current.id;populate()}if(document.body.classList.contains('inline-edit'))enableInline()});
