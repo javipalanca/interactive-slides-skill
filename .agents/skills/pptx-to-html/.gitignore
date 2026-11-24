@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+output/
+*.pptx
+
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific - Temporary files
+temp_pptx/
+*.log
+conversion.log
+
+# Project specific - Output directories
+test_output/
+final_output/
+output/
+
+# Project specific - Test/Sample files
+*.pptx
+*.ppt
+
+# Project specific - Build artifacts
+scripts.zip
+.genkit/
+
+# Local settings (optional - currently included)
+# .claude/settings.local.json

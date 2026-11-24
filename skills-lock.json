@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "skills": {
+    "frontend-slides": {
+      "source": "zarazhangrui/frontend-slides",
+      "commit": "9906a34d640d2111f724544cbc50f7f130569ae1",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "1c6781287ffc504332ec81a61bc7766d2fcee8d2c99d76a463e53bba4c55b840"
+    },
+    "html-ppt": {
+      "source": "lewislulu/html-ppt-skill",
+      "commit": "fd1629067909ff55b36b905476de4e5f26062a1f",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "d85695662e71864fabfab3106a40e942b3d783f5270d786672fbb784ba237336"
+    },
+    "hyperframes": {
+      "source": "heygen-com/hyperframes",
+      "commit": "dca98ed4c84b3258cfee6d0feb80b37fbdd978d1",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes/SKILL.md",
+      "computedHash": "2410221fb18d256b900c9ea8b15b8e3e7f119c7da153d24c55f9b854b7f07eb7"
+    },
+    "pptx-to-html": {
+      "source": "cskwork/pptx-to-html-updated",
+      "commit": "5b0a9bf6a318997393f1f71f825a621b9b1d22b6",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "7e34fc3f8495710417cc059313039daf9c0ed0dbf99397ce0bf9cfd2e219ac33"
+    },
+    "storytelling-web": {
+      "source": "wang1212/storytelling-web",
+      "commit": "f08f593e0af3dfc590eac364a423ccc68280732c",
+      "sourceType": "github",
+      "skillPath": "skills/storytelling-web/SKILL.md",
+      "computedHash": "ebe698b83adce6fc69ad2b9ba991681139eea3057d15ca4542fd52e708ba0764"
+    }
+  }
+}
