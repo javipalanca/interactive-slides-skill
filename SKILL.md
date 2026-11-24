@@ -40,6 +40,7 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 - Para PPTX ejecuta `uv run --script scripts/extract_pptx.py origen1.pptx [origen2.pptx ...] --output extraccion.json`. Inventaría títulos, textos, tablas, notas y gráficos, y guarda las imágenes en `extraccion-media/` con su texto alternativo original. Nunca atribuyas una extracción inexistente.
 - Las notas, tablas e imágenes importan; si no se extraen satisfactoriamente, inspecciona el material original por otra vía. Reutiliza las imágenes relevantes con `image: {src, alt}` (redacta un `alt` útil si el original está vacío); las marcadas `supported: false` (EMF, WMF…) deben convertirse o recrearse. Para gráficas complejas, recrea visualizaciones accesibles en SVG.
 - Aplica `references/instructional-design.md`: alterna explicaciones, ejemplos y práctica; reserva tiempo de realización y revisión.
+- Decide la **densidad**: *guiada por el docente* (clase o charla en directo: una idea por diapositiva, 1–3 viñetas, más diapositivas) o *de lectura autónoma* (material para repasar sin docente: diapositivas autosuficientes, 4–6 viñetas o tarjetas). Si no se indica, infiere: sesión en directo → guiada; material para estudiar en casa → lectura.
 - Para varias fuentes, conserva trazabilidad y prioriza decisiones pedagógicas explícitas sobre el orden original. No fusiones secciones contradictorias silenciosamente.
 
 ### 2. Guion de contenidos
@@ -47,7 +48,9 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 - Una idea principal por diapositiva y títulos que anticipen su conclusión. Evita paredes de texto.
 - Organiza capítulos y agenda clicable. Acompaña actividades con objetivo, consigna, duración, criterio de corrección y feedback.
 - Define cada diapositiva en `content.json` con `id` estable (importante para persistencia). Admite HTML limitado en campos enriquecidos; no inyectes HTML desde fuentes no confiables.
-- Incorpora ejemplos trabajados, contraejemplos y una síntesis final. No sacrifiques explicaciones esenciales solo por reducir slides.
+- Incorpora ejemplos trabajados, contraejemplos y una síntesis final. No sacrifiques explicaciones esenciales solo por reducir slides: si no cabe, **divide en más diapositivas**, nunca reduzcas la letra.
+- Lo que solo debe saber quien presenta (guion, tiempos, «aquí pregunta a la clase») va en `notes`, nunca en el texto visible. Escribe las notas como **señales**, no como un texto para leer: frases cortas, palabras clave, la transición a la siguiente diapositiva y el tiempo orientativo (ver `references/instructional-design.md`).
+- Nunca pongas en una diapositiva texto interno del proceso: nombres de ficheros o plantillas, «opción A», notas de requisitos («tono cercano», «para alumnos de 1.º»), rutas o etiquetas de fuente que no sean citas reales.
 - En PPTX, prepara un `source-map.json` con una entrada por slide generada y todas sus fuentes, con el formato de `references/pptx-workflow.md`: `[{"slide_id":"agentes","sources":[{"source_file":"modulo1.pptx","source_slide":7}],"transformation":"Convertido en pregunta guiada"}]`.
 
 ### 3. Interacciones y autoevaluación
@@ -65,9 +68,10 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 - Parte de `assets/slides.css`, con el tema predeterminado de papel crema, cuadrícula de references/taller-skills-actual.html, naranjas y amarillos inspirado en SPADE, y su variante oscura. Cada diapositiva es un lienzo 16:9 de 1280×720 que se ajusta para ocupar `meta.slideSize` % del espacio de pantalla disponible (85 por defecto, 50–100; editable en el panel). El lienzo no se desplaza: si el contenido no cabe, divide la diapositiva.
 - Tema: fija `meta.theme` (`light`, `dark` o `auto`) como valor por defecto; el espectador puede alternarlo con el botón de tema o `T`. Comprueba el contraste en ambos temas.
 - Portada: elige con `illustration` el dibujo que corresponda al tema de la clase (`general`, `ciencia`, `programacion`, `datos`, `agentes`, `matematicas`, `comunicacion`) o, si ninguno encaja, dibuja un SVG propio adaptado al tema y pásalo como ruta. `none` la omite.
-- Imágenes: `image: {src, alt, caption}` con `alt` descriptivo; `layout: "split"` para texto e imagen en dos columnas, `layout: "cards"` para viñetas en tarjetas.
+- Imágenes: `image: {src, alt, caption, fit}` con `alt` descriptivo. Diagramas, capturas y gráficos usan `fit: "contain"` (por defecto, nunca recorta); fotografías que deben llenar el marco, `fit: "cover"`. `layout: "split"` para texto e imagen en dos columnas, `layout: "cards"` para viñetas en tarjetas. Si añadir una imagen hace que la diapositiva no quepa, muévela a una diapositiva nueva.
 - Muestra todo el texto al entrar. Reserva el movimiento para explicar procesos, como el recorrido de un mensaje o una transición de estado.
-- Controles: `←/→` anterior/siguiente, `O` índice, `N` notas, `S` mostrar/ocultar solución, `T` tema claro/oscuro, `F` pantalla completa, `Esc` cerrar paneles, `Home/End` inicio/final. No captures teclas cuando el foco está en entradas o elementos editables.
+- Controles: `←/→` (o deslizar en pantallas táctiles) anterior/siguiente, `O` índice, `N` notas, `P` vista del ponente, `S` mostrar/ocultar solución, `T` tema claro/oscuro, `F` pantalla completa, `Esc` cerrar paneles, `Home/End` inicio/final. La URL lleva `#N` para enlazar a la diapositiva N. Imprimir (`Ctrl/Cmd+P` → Guardar como PDF) genera una página por diapositiva activa en tema claro. No captures teclas cuando el foco está en entradas o elementos editables.
+- **Vista del ponente** (`P`): abre una ventana con la diapositiva actual, la siguiente, las notas y un cronómetro, sincronizada con la proyección; pensada para el portátil del docente mientras el proyector muestra la presentación.
 - Añade `prefers-reduced-motion`, navegación por foco, etiquetas, mensajes anunciados, tamaño legible y adaptación a móvil/proyector. Ver `references/accessibility-and-qa.md`.
 - Evita dependencias de CDN; el borrador y el HTML definitivo deben funcionar sin red ni servidor al abrir sus HTML localmente. No uses imágenes ni vídeos remotos: incrusta las imágenes y atribuye su origen cuando proceda.
 
@@ -86,6 +90,7 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 
 - `scripts/create_deck.py`: incrusta logos, imágenes e ilustraciones, **valida el contenido** y copia la plantilla; no escribe nada si hay errores y no sobrescribe salidas existentes salvo `--force`.
 - `scripts/validate_deck.py`: valida JSON, IDs, ejercicios, imágenes, tema, tamaño, archivos y estructura mínima con las mismas reglas que aplica el editor antes de publicar. Corrige errores y repite hasta obtener 0 incidencias.
+- En el borrador, pulsa **Gestionar → Revisar desbordamientos** (y atiende la marca «⚠ Desborda» de la barra): el lienzo 16:9 no se desplaza, así que cualquier diapositiva señalada debe dividirse o aligerarse antes de publicar.
 - Revisa visualmente, abriendo `index.html` directamente, portada, una slide de texto largo, una con imagen, una sección, cada tipo de ejercicio, índice, notas, soluciones, ambos temas y diseño móvil. Comprueba consola, accesibilidad de teclado, persistencia tras recarga y pantalla completa.
 - Haz una prueba de navegación completa y corrige cortes, scroll inesperado, imágenes deformadas y contrastes. No declares validación visual si no dispones de navegador.
 - Contrasta el contenido con las fuentes: conceptos, ejemplos, cifras, terminología y referencias. En modo PPTX verifica que no falten temas importantes.
@@ -105,6 +110,8 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 11. Admite 0–3 logos de usuario, incrustados en Base64 y sin espacios residuales cuando no haya ninguno.
 12. Imágenes con texto alternativo e ilustración de portada acorde al tema, incrustadas en Base64.
 13. Tema claro y oscuro conmutables por el espectador.
+14. Ninguna diapositiva activa desborda el lienzo; notas del ponente fuera del texto visible y vista del ponente operativa.
+15. Impresión a PDF con una diapositiva por página.
 
 ## Material de consulta (leer según necesidad)
 
@@ -119,7 +126,7 @@ Ejecuta los scripts **siempre** con `uv run --script` (Python 3.12.x y dependenc
 ## Límites y decisiones importantes
 
 - Genera cada presentación con el CSS y los componentes del taller incluidos en la plantilla. Adapta los textos, la ilustración de portada, las imágenes y los ejemplos al tema de la clase.
-- El extractor PPTX captura títulos, texto, tablas, notas, imágenes y una descripción de los gráficos; no convierte SmartArt, animaciones, gráficos ni objetos incrustados. Reconstruye esos elementos o notifícalos.
+- El extractor PPTX captura títulos, texto, tablas, notas, enlaces, imágenes, diapositivas ocultas, los datos de los gráficos y el texto de los SmartArt; no reproduce su aspecto ni las animaciones u objetos incrustados. Reconstruye gráficos y SmartArt como SVG con esos datos, o notifícalos. Las diapositivas ocultas del original entran con `disabled: true` si se conservan. Nunca ejecutes macros del PPTX.
 - La corrección en navegador es formativa: cualquier estudiante puede inspeccionar las respuestas. Para exámenes sumativos usar servidor y autenticación.
 - Si `localStorage` está bloqueado, la sesión funciona sin persistencia; informa de ello. No recopiles datos personales ni envíes respuestas a terceros.
 - No sacrifiques contenido científico por diseño. Cita fuentes y advierte cuando falte sustento.

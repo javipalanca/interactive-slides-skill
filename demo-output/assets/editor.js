@@ -61,6 +61,7 @@ function deckErrors(deck){
   if(!TYPES.includes(s.type))errors.push(label+': type no válido: '+s.type);
   if(s.layout!==undefined&&!LAYOUTS.includes(s.layout))errors.push(label+': layout no válido: '+s.layout);
   if(s.image!==undefined&&(!s.image||!isText(s.image.alt)||typeof s.image.src!=='string'||!IMAGE_URI.test(s.image.src)||s.image.src.length>MAX_DATA_URI||(s.image.caption!==undefined&&typeof s.image.caption!=='string')))errors.push(label+': image necesita src en Base64 (PNG, JPEG, WebP, GIF o SVG; ≤ 5 MiB) y alt no vacío');
+  if(s.image&&s.image.fit!==undefined&&!['contain','cover'].includes(s.image.fit))errors.push(label+': image.fit debe ser contain o cover');
   if(s.illustration!==undefined&&!(typeof s.illustration==='string'&&(s.illustration==='none'||app().illustrations.includes(s.illustration)||(IMAGE_URI.test(s.illustration)&&s.illustration.length<=MAX_DATA_URI))))errors.push(label+': illustration debe ser una ilustración incluida, "none" o una imagen en Base64');
   if(s.type==='exercise'&&!s.exercise)errors.push(label+': exercise obligatorio');
   if(!s.exercise)return;
@@ -130,10 +131,20 @@ function populate(){
  const preview=$('imagePreview');preview.replaceChildren();
  if(s.image){const img=document.createElement('img');img.src=s.image.src;img.alt='Vista previa';img.style.maxHeight='90px';img.style.objectFit='contain';preview.append(img)}
  else{const p=document.createElement('p');p.className='logo-editor-empty';p.textContent='Esta diapositiva no tiene imagen.';preview.append(p)}
- $('imageAlt').value=s.image?.alt||'';$('imageCaption').value=s.image?.caption||'';$('imageSplit').checked=s.layout==='split';
- ['imageAlt','imageCaption','imageSplit','imageRemove'].forEach(id=>$(id).disabled=!s.image);
+ $('imageAlt').value=s.image?.alt||'';$('imageCaption').value=s.image?.caption||'';$('imageSplit').checked=s.layout==='split';$('imageCover').checked=s.image?.fit==='cover';
+ ['imageAlt','imageCaption','imageSplit','imageCover','imageRemove'].forEach(id=>$(id).disabled=!s.image);
 }
 function updateImage(patch){const s=selectedSlide();if(!s?.image)return;app().updateSlide(s.id,{image:{...s.image,...patch}});save();populate()}
+
+/* ---------- Desbordamiento: el lienzo 16:9 no se desplaza, así que el contenido debe caber ---------- */
+const isMobile=()=>matchMedia('(max-width:760px)').matches;
+function overflows(){const el=document.querySelector('#stage .slide');return !!el&&!isMobile()&&(el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2)}
+function flagOverflow(){const bad=overflows();$('overflowWarning').hidden=!bad;$('overflowWarning').title=bad?'El contenido no cabe en el lienzo 16:9: divide la diapositiva o reduce el texto.':''}
+function overflowingSlides(){
+ if(isMobile())return null;const current=app().getCurrentSlide()?.id;const bad=[];
+ app().getDeck().slides.forEach((s,i)=>{if(s.disabled)return;app().goToSlideId(s.id);if(overflows())bad.push(`${i+1}. ${s.title}`)});
+ if(current)app().goToSlideId(current);return bad;
+}
 
 /* ---------- Edición in situ ---------- */
 function enableInline(){
@@ -205,7 +216,8 @@ const button=$('publishBtn');button.disabled=true;button.textContent='Preparando
   for(const js of [files[1],publishedRuntime(files[2])]){const script=document.createElement('script');script.textContent=safeScript(js);base.querySelector('body').append(script)}
   // Guard against accidental dependencies on remote or local paths in author content.
   const linked=base.querySelectorAll('link[href],script[src],img[src]:not([src^="data:"]),iframe[src],video[src],audio[src],source[src]');if(linked.length)throw Error('Quedan referencias externas o recursos sin incrustar.');
-  const html='<!doctype html>\n'+base.outerHTML;download(filename()+'-definitiva.html',html,'text/html;charset=utf-8');message(`HTML publicado: ${enabled.length} diapositivas activas, sin controles ni código de edición.`);
+  const html='<!doctype html>\n'+base.outerHTML;download(filename()+'-definitiva.html',html,'text/html;charset=utf-8');
+  const bad=overflowingSlides();message(`HTML publicado: ${enabled.length} diapositivas activas, sin controles ni código de edición.`+(bad?.length?` Atención, desbordan el lienzo: ${bad.join('; ')}.`:''));
 }catch(e){message('No se pudo generar el HTML: '+e.message);console.error(e)}finally{button.disabled=false;button.textContent='Generar HTML definitivo'}}
 
 function bind(){
@@ -220,6 +232,8 @@ function bind(){
   $('imageUpload').addEventListener('change',async()=>{const s=selectedSlide(),file=$('imageUpload').files[0];$('imageUpload').value='';if(!s||!file)return;try{const src=await readImage(file,IMAGE_TYPES);app().updateSlide(s.id,{image:{...(s.image||{}),src,alt:s.image?.alt||baseName(file)}});save();populate();message('Imagen incrustada. Revisa el texto alternativo.')}catch(e){message(e.message)}});
   $('imageAlt').addEventListener('change',()=>updateImage({alt:$('imageAlt').value.trim()||'Imagen'}));
   $('imageCaption').addEventListener('change',()=>{const c=$('imageCaption').value.trim();updateImage({caption:c||undefined})});
+  $('imageCover').addEventListener('change',()=>updateImage({fit:$('imageCover').checked?'cover':undefined}));
+  $('overflowCheckBtn').addEventListener('click',()=>{const bad=overflowingSlides();message(bad===null?'Revisa los desbordamientos en una pantalla de escritorio.':bad.length?'Diapositivas que desbordan el lienzo: '+bad.join('; ')+'. Divídelas o reduce el contenido.':'Ninguna diapositiva activa desborda el lienzo.')});
   $('imageSplit').addEventListener('change',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{layout:$('imageSplit').checked?'split':undefined});save();populate()});
   $('imageRemove').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;app().updateSlide(s.id,{image:undefined,layout:s.layout==='split'?undefined:s.layout});save();populate()});
   $('exerciseApply').addEventListener('click',()=>{const s=selectedSlide();if(!s)return;try{const text=$('exerciseJson').value.trim();const ex=text?JSON.parse(text):undefined;if(!ex&&s.type==='exercise')throw Error('una diapositiva de tipo exercise necesita ejercicio');if(ex){const errors=exerciseErrors(ex,'ejercicio');const clash=app().getDeck().slides.some(o=>o.id!==s.id&&o.exercise?.id===ex.id);if(clash)errors.push('exercise.id repetido '+ex.id);if(errors.length)throw Error(errors.join('; '))}app().updateSlide(s.id,{exercise:ex});save();populate();message('Ejercicio actualizado.')}catch(e){message('Ejercicio no válido: '+e.message)}});
@@ -228,7 +242,7 @@ function bind(){
   $('loadDraftFile').addEventListener('change',async()=>{const file=$('loadDraftFile').files[0];if(!file)return;try{const deck=JSON.parse(await file.text());if(deck.meta?.id!==originalDeck.meta.id)throw Error('El ID de la presentación no coincide');const errors=deckErrors(deck);if(errors.length)throw Error(errors.slice(0,5).join('; '));app().replaceDeck(deck);selected=app().getCurrentSlide().id;save();populate();message('Borrador importado.')}catch(e){message('No se pudo importar: '+e.message)}finally{$('loadDraftFile').value=''}});
   $('resetDraftBtn').addEventListener('click',()=>{if(!confirm('¿Descartar todos los cambios locales y restaurar la presentación original?'))return;localStorage.removeItem('interactive-editor:'+originalDeck.meta.id);app().replaceDeck(JSON.parse(JSON.stringify(originalDeck)));selected=app().getCurrentSlide().id;populate();message('Presentación original restaurada.')});
   $('publishBtn').addEventListener('click',publish);
-  window.addEventListener('slides:render',()=>{if(!$('editorPanel').hidden){const current=app().getCurrentSlide();if(current&&!selectedSlide()?.disabled)selected=current.id;populate()}if(document.body.classList.contains('inline-edit'))enableInline()});
+  window.addEventListener('slides:render',()=>{requestAnimationFrame(flagOverflow);if(!$('editorPanel').hidden){const current=app().getCurrentSlide();if(current&&!selectedSlide()?.disabled)selected=current.id;populate()}if(document.body.classList.contains('inline-edit'))enableInline()});
 }
-window.addEventListener('slides:ready',async()=>{try{originalDeck=JSON.parse($('embedded-deck').textContent)}catch(e){originalDeck=JSON.parse(JSON.stringify(app().getDeck()))}selected=app().getCurrentSlide()?.id;bind();populate()});
+window.addEventListener('slides:ready',async()=>{try{originalDeck=JSON.parse($('embedded-deck').textContent)}catch(e){originalDeck=JSON.parse(JSON.stringify(app().getDeck()))}selected=app().getCurrentSlide()?.id;bind();populate();flagOverflow()});
 })();

@@ -799,3 +799,15 @@ img.doodle.cover-art{right:70px;top:56px;width:320px;height:270px;object-fit:con
 svg.doodle.cover-art{right:70px;top:56px}
 #nav #themeBtn{min-width:40px;justify-content:center}
 @media(max-width:760px){.slide .split{grid-template-columns:1fr}.slide figure.media img{max-height:50vh}}
+.slide figure.media.fit-cover img{width:100%;height:100%;object-fit:cover}
+/* Impresión / PDF: una diapositiva activa por página (window beforeprint construye #printDeck) */
+#printDeck{display:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important;padding:0!important;margin:0!important}
+  body>*:not(#printDeck){display:none!important}
+  #printDeck{display:block}
+  #printDeck .slide{position:relative;inset:auto;display:flex;width:1280px;height:720px;margin:0;border-radius:0;box-shadow:none;break-after:page;page-break-after:always}
+  #printDeck .exercise-actions,#printDeck .feedback,#printDeck .solution,#printDeck .slide>button{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}

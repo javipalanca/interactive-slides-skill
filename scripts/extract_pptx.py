@@ -15,6 +15,11 @@ import argparse
 import json
 from pathlib import Path
 
+DIAGRAM_URIS = ('http://schemas.openxmlformats.org/drawingml/2006/diagram',
+                'http://schemas.microsoft.com/office/drawing/2008/diagram')
+NS_A = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+NS_R = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+
 # Formatos que la presentación puede incrustar (ver create_deck.py).
 SUPPORTED_EXT = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'}
 
@@ -27,7 +32,65 @@ def iter_shapes(shapes):
             yield from iter_shapes(shape.shapes)
 
 
-def describe(shape, slide_no, counter, ctx):
+def smartart_text(shape, slide):
+    """Textos de los nodos de un SmartArt (sin su disposición visual), o None si no es SmartArt."""
+    data = shape._element.find('.//' + NS_A + 'graphicData')
+    if data is None or data.get('uri') not in DIAGRAM_URIS:
+        return None
+    rel_ids = next((el for el in data.iter() if el.tag.endswith('}relIds')), None)
+    rid = rel_ids.get(NS_R + 'dm') if rel_ids is not None else None
+    if not rid:
+        return []
+    from lxml import etree
+    root = etree.fromstring(slide.part.related_part(rid).blob)
+    nodes = []
+    for pt in root.iter('{*}pt'):
+        text = ''.join(t.text or '' for t in pt.iter(NS_A + 't')).strip()
+        if text:
+            nodes.append(text)
+    return nodes
+
+
+def chart_data(chart):
+    plot = chart.plots[0] if len(chart.plots) else None
+    data = {'type': str(chart.chart_type), 'title': '', 'categories': [], 'series': []}
+    try:
+        if chart.has_title and chart.chart_title.has_text_frame:
+            data['title'] = chart.chart_title.text_frame.text
+    except (AttributeError, KeyError, ValueError):
+        pass
+    if plot is not None:
+        try:
+            data['categories'] = [str(c) for c in plot.categories]
+        except (AttributeError, KeyError, ValueError):
+            pass
+        for series in plot.series:
+            try:
+                values = list(series.values)
+            except (AttributeError, KeyError, ValueError):
+                values = []
+            data['series'].append({'name': series.name, 'values': values})
+    return data
+
+
+def hyperlinks(shape):
+    links = []
+    if shape.has_text_frame:
+        for para in shape.text_frame.paragraphs:
+            for run in para.runs:
+                address = run.hyperlink.address if run.hyperlink is not None else None
+                if address:
+                    links.append({'text': run.text, 'url': address})
+    try:
+        address = shape.click_action.hyperlink.address
+        if address:
+            links.append({'text': shape.name, 'url': address})
+    except (AttributeError, KeyError, ValueError):
+        pass
+    return links
+
+
+def describe(shape, slide_no, counter, ctx, slide):
     part = {'name': shape.name, 'type': str(shape.shape_type) if shape.shape_type is not None else 'UNKNOWN'}
     if getattr(shape, 'is_placeholder', False):
         try:
@@ -39,9 +102,16 @@ def describe(shape, slide_no, counter, ctx):
     if getattr(shape, 'has_table', False) and shape.has_table:
         part['table'] = [[cell.text for cell in row.cells] for row in shape.table.rows]
     if getattr(shape, 'has_chart', False) and shape.has_chart:
-        chart = shape.chart
-        part['chart'] = {'type': str(chart.chart_type),
-                         'series': [s.name for s in chart.plots[0].series] if len(chart.plots) else []}
+        part['chart'] = chart_data(shape.chart)
+    try:
+        nodes = smartart_text(shape, slide)
+    except (AttributeError, KeyError, ValueError, ImportError):
+        nodes = None
+    if nodes is not None:
+        part['smartart'] = nodes
+    links = hyperlinks(shape)
+    if links:
+        part['links'] = links
     try:
         image = shape.image
     except (AttributeError, ValueError, KeyError):
@@ -66,7 +136,7 @@ def extract(path, Presentation, ctx):
     ctx = {**ctx, 'stem': Path(path).stem}
     for i, slide in enumerate(prs.slides, 1):
         counter = [0]
-        shapes = [describe(shape, i, counter, ctx) for shape in iter_shapes(slide.shapes)]
+        shapes = [describe(shape, i, counter, ctx, slide) for shape in iter_shapes(slide.shapes)]
         title = ''
         try:
             if slide.shapes.title is not None:
@@ -79,7 +149,8 @@ def extract(path, Presentation, ctx):
                 notes = slide.notes_slide.notes_text_frame.text
         except (AttributeError, KeyError, ValueError):
             pass
-        slides.append({'number': i, 'title': title, 'shapes': shapes, 'notes': notes.strip(),
+        slides.append({'number': i, 'title': title, 'hidden': slide._element.get('show') == '0',
+                       'layout': slide.slide_layout.name, 'shapes': shapes, 'notes': notes.strip(),
                        'shape_count': len(shapes), 'image_count': counter[0]})
     return {'source_file': str(path), 'slide_count': len(slides), 'slides': slides}
 
@@ -103,7 +174,8 @@ def main():
     ctx = {'out_dir': out_dir, 'media_dir': media_dir}
     result = {'sources': [extract(file, Presentation, ctx) for file in a.files],
               'media_dir': media_dir.relative_to(out_dir).as_posix() if media_dir.is_relative_to(out_dir) else str(media_dir),
-              'warning': 'No se extraen animaciones ni SmartArt; los gráficos solo se describen. '
+              'warning': 'No se extraen animaciones; de los SmartArt solo el texto de sus nodos y de los gráficos '
+                         'sus datos (categorías y series), no su aspecto. Las diapositivas hidden=true estaban ocultas. '
                          'Las imágenes con supported=false (EMF, WMF, TIFF...) deben convertirse a PNG/SVG o recrearse. '
                          'Revisar los PPTX visualmente.'}
     out_dir.mkdir(parents=True, exist_ok=True)

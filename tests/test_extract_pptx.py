@@ -20,6 +20,19 @@ open(sys.argv[2], "wb").write(base64.b64decode(sys.argv[3]))
 pic = s.shapes.add_picture(sys.argv[2], Inches(1), Inches(2))
 pic._element.nvPicPr.cNvPr.set("descr", "Un píxel")
 s.notes_slide.notes_text_frame.text = "Notas del ponente"
+box = s.shapes.add_textbox(Inches(5), Inches(2), Inches(3), Inches(1))
+run = box.text_frame.paragraphs[0].add_run()
+run.text = "Fuente"
+run.hyperlink.address = "https://example.org/fuente"
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE
+data = CategoryChartData()
+data.categories = ["Luz", "Sombra"]
+data.add_series("Altura (cm)", (14, 10))
+s2 = prs.slides.add_slide(prs.slide_layouts[5])
+s2.shapes.title.text = "Datos"
+s2.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(1), Inches(2), Inches(6), Inches(4), data)
+s2._element.set("show", "0")
 prs.save(sys.argv[1])
 '''
 
@@ -44,6 +57,14 @@ class ExtractTest(unittest.TestCase):
             self.assertEqual(image['alt'], 'Un píxel')
             self.assertTrue(image['supported'])
             self.assertEqual((folder / image['src']).read_bytes(), base64.b64decode(PIXEL))
+            links = [l for sh in slide['shapes'] for l in sh.get('links', [])]
+            self.assertIn({'text': 'Fuente', 'url': 'https://example.org/fuente'}, links)
+            self.assertFalse(slide['hidden'])
+            second = data['sources'][0]['slides'][1]
+            self.assertTrue(second['hidden'])
+            chart = next(sh['chart'] for sh in second['shapes'] if 'chart' in sh)
+            self.assertEqual(chart['categories'], ['Luz', 'Sombra'])
+            self.assertEqual(chart['series'], [{'name': 'Altura (cm)', 'values': [14.0, 10.0]}])
 
 
 if __name__ == '__main__':

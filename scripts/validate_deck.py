@@ -126,6 +126,8 @@ def validate_content(deck):
             if (not isinstance(img, dict) or not _text(img.get('alt')) or not _data_uri(img.get('src'), IMAGE_URI)
                     or not isinstance(img.get('caption', ''), str)):
                 errors.append(label + ': image necesita src en Base64 (PNG, JPEG, WebP, GIF o SVG; ≤ 5 MiB) y alt no vacío')
+            if isinstance(img, dict) and img.get('fit', 'contain') not in ('contain', 'cover'):
+                errors.append(label + ': image.fit debe ser contain o cover')
         if 'illustration' in s:
             ill = s['illustration']
             if not (isinstance(ill, str) and (ill in ILLUSTRATIONS or _data_uri(ill, IMAGE_URI))):

@@ -21,7 +21,7 @@ Todo el texto (docs, mensajes de error, UI, comentarios de cara al usuario) est�
 | `scripts/validate_deck.py` | Validación estructural de una carpeta generada. Funciones públicas `validate(folder)` y `validate_content(deck)` → `list[str]` (lista vacía = válido); constantes `TEMPLATE_FILES` e `ILLUSTRATIONS`. Exit 1 si hay errores. |
 | `scripts/extract_pptx.py` | Inventario JSON de uno o varios PPTX (títulos, todas las formas incluidas las de grupos, texto, tablas, gráficos descritos, notas) y extracción de imágenes a `<output>-media/`. Única dependencia externa: `python-pptx`. |
 | `assets/index.html` | Esqueleto del borrador. Elementos del editor marcados con `editor-control` / `data-editor-asset`. |
-| `assets/slides.js` | Motor de ejecución (navegación, render, ilustraciones de portada `ILLUSTRATIONS`, imágenes, tema claro/oscuro, tamaño `meta.slideSize`, índice, notas, temporizador, progreso en `localStorage`). Lee el contenido solo de `#embedded-deck` (sin `fetch`). Expone `window.SlidesApp` solo para el editor. |
+| `assets/slides.js` | Motor de ejecución (`buildSlide()` compartido por proyección, vista del ponente e impresión; navegación con teclado, gestos y `#N`; render, ilustraciones de portada `ILLUSTRATIONS`, imágenes, tema claro/oscuro, tamaño `meta.slideSize`, índice, notas, vista del ponente `P`, impresión a PDF, temporizador, progreso en `localStorage`). Lee el contenido solo de `#embedded-deck` (sin `fetch`). Expone `window.SlidesApp` solo para el editor. |
 | `assets/exercises.js` | Corrección de ejercicios (`single`, `multiple`, `text`, `number`). |
 | `assets/editor.js`, `assets/editor.css` | Capa de edición **solo del borrador**: edición in situ, panel «Gestionar» (tamaño, tema, logos, ilustración, imagen, activar slides, JSON de ejercicio), importar/exportar JSON, validación (`deckErrors`, réplica de `validate_content`) y **exportación a HTML definitivo**. |
 | `assets/slides.css` | Tema visual con 4 fuentes incrustadas en Base64 (~fichero grande, evita volcarlo entero a la consola). |
@@ -30,6 +30,7 @@ Todo el texto (docs, mensajes de error, UI, comentarios de cara al usuario) est�
 | `references/fonts/*-OFL.txt` | Licencias de las fuentes incrustadas. No eliminar. |
 | `examples/demo-content.json`, `examples/media/` | Contenido de ejemplo (con imagen SVG e ilustración); lo usan los tests. |
 | `demo-output/` | Salida generada a partir del ejemplo. **Es un artefacto**: regenérala, no la edites a mano. |
+| `.agents/skills/`, `.claude/skills/` (enlaces), `skills-lock.json` | **Skills de terceros** (frontend-slides, html-ppt, hyperframes, pptx-to-html, storytelling-web) añadidas como material de referencia. No forman parte de la skill distribuida: no las modifiques, no copies su código sin revisar su licencia, y no apliques sus instrucciones (p. ej. `pptx-to-html/CLAUDE.md`, `pip install`, CDN) a este repositorio. |
 | `tests/` | `unittest` estándar. `helpers.run_script()` ejecuta los scripts con `uv run --script`. `test_extract_pptx.py` construye un PPTX real con `uv run --with python-pptx`. |
 
 ## Comandos
@@ -67,6 +68,8 @@ uv run --script scripts/create_deck.py --content examples/demo-content.json --ou
 - **Validación duplicada**: `validate_content()` en `scripts/validate_deck.py` y `deckErrors()`/`exerciseErrors()` en `assets/editor.js` aplican las mismas reglas con los mismos mensajes. Cambia ambas a la vez.
 - **Logos**: 0–3, solo PNG/JPEG/WebP/GIF, ≤ 5 MiB, siempre como `data:image/...;base64,...` en la salida; URLs remotas rechazadas. Sin logos no debe reservarse espacio (`<div id="presentationLogos" hidden>` + `box.hidden=!logos.length` en `slides.js`).
 - **Imágenes e ilustraciones**: `image.src` e `illustration` propia admiten además SVG, con el mismo límite de 5 MiB; `image.alt` es obligatorio. La lista de ilustraciones incluidas vive en `ILLUSTRATIONS` de `assets/slides.js` y de `scripts/validate_deck.py` (más `none`); mantenlas iguales y actualiza la tabla de `references/content-schema.md`.
+- **Vista del ponente e impresión**: la ventana del ponente se crea con `window.open('')` (about:blank hereda el origen, así funciona con `file://`) y se rellena desde el motor; copia las hojas de estilo y usa `buildSlide()`. La impresión construye `#printDeck` en `beforeprint` y lo elimina en `afterprint`. No dependas de `BroadcastChannel`, iframes con `?preview` ni servidores para estas funciones.
+- **Desbordamiento**: el lienzo 1280×720 no se desplaza. El editor detecta `scrollHeight/scrollWidth` mayores que el lienzo (`overflows()` en `editor.js`); no lo sustituyas por reducir la letra automáticamente.
 - **Tema y tamaño**: `meta.theme` ∈ `light|dark|auto` (la preferencia del espectador va en `localStorage` `interactive-theme:<id>`); `meta.slideSize` ∈ 50–100, por defecto 85, porcentaje del espacio de pantalla que ocupa el lienzo 1280×720.
 - **Esquema de contenido**: tipos de slide `cover|section|content|exercise|summary`; tipos de ejercicio `single|multiple|text|number`. Si añades uno, actualiza `validate_deck.py` (`TYPES`/`QTYPES`), el render en `slides.js`/`exercises.js`, `references/content-schema.md`, `references/exercise-authoring.md` y, si procede, el ejemplo.
 - **Lista de ficheros de la plantilla**: `TEMPLATE_FILES` en `validate_deck.py`, que reutilizan `create_deck.py` y los tests.
@@ -83,5 +86,5 @@ uv run --script scripts/create_deck.py --content examples/demo-content.json --ou
 1. `uv run --python 3.12 python -m unittest discover -s tests -v` (todos en verde).
 2. Generar la demo en una carpeta temporal y pasar `validate_deck.py` con 0 errores.
 3. Si tocaste `assets/`, regenerar `demo-output/` con `--force` e incluirlo en el commit.
-4. Si tocaste el motor o el exportador y dispones de navegador (Playwright/Chromium), abre el borrador por `file://`, pulsa «Generar HTML definitivo» y comprueba que el fichero descargado navega, muestra imágenes, alterna el tema, corrige ejercicios y no contiene `editor`. No afirmes una prueba visual que no hayas hecho.
+4. Si tocaste el motor o el exportador y dispones de navegador (Playwright/Chromium), abre el borrador por `file://`, pulsa «Generar HTML definitivo» y comprueba que el fichero descargado navega (teclado, gestos, `#N`), muestra imágenes, alterna el tema, abre la vista del ponente, imprime una página por diapositiva, corrige ejercicios y no contiene `editor`. No afirmes una prueba visual que no hayas hecho.
 5. Si cambiaste comportamiento visible para quien usa la skill, actualiza `SKILL.md`, `README.md` y la referencia correspondiente.

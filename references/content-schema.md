@@ -23,7 +23,7 @@ Tipos de slide: `cover` (subtitle, illustration), `section` (subtitle), `content
 
 - `chapter`, `eyebrow`, `notes`, `solution` (texto libre que no se muestra inicialmente).
 - `code`: bloque de código preformateado.
-- `image`: `{ "src", "alt", "caption"? }`. PNG, JPEG, WebP, GIF o SVG de hasta 5 MiB. `alt` es obligatorio y debe describir lo que aporta la imagen; `caption` es un pie opcional (úsalo para atribuir la fuente).
+- `image`: `{ "src", "alt", "caption"?, "fit"? }`. PNG, JPEG, WebP, GIF o SVG de hasta 5 MiB. `alt` es obligatorio y debe describir lo que aporta la imagen; `caption` es un pie opcional (úsalo para atribuir la fuente). `fit`: `contain` (por defecto: muestra la imagen entera; úsalo en diagramas, capturas, gráficos y logotipos) o `cover` (recorta para llenar el marco; solo fotografías).
 - `layout`: `"cards"` muestra las viñetas como tarjetas; `"split"` coloca texto e imagen en dos columnas (requiere `image`).
 
 Las claves `id` deben ser estables y únicas. Todo el texto se inserta como texto plano, no como HTML.

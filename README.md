@@ -27,7 +27,7 @@ Para PPTX: `uv run --script scripts/extract_pptx.py clase.pptx --output /tmp/cla
 
 El tema visual base usa papel de bloc, crema, naranja y amarillo inspirado en SPADE, con las cuatro fuentes del Taller de Skills incrustadas. Cada diapositiva es un lienzo 16:9 que ocupa por defecto el **85 % del espacio de pantalla disponible** (configurable entre 50 y 100 %).
 
-Instalación en Codex: copiar esta carpeta a `~/.agents/skills/interactive-html-slides/` o `.agents/skills/interactive-html-slides/`; en Claude Code: `~/.claude/skills/interactive-html-slides/` o `.claude/skills/interactive-html-slides/`. Para compartir, comprimir **la carpeta** entera.
+Instalación en Codex: copiar esta carpeta a `~/.agents/skills/interactive-html-slides/` o `.agents/skills/interactive-html-slides/`; en Claude Code: `~/.claude/skills/interactive-html-slides/` o `.claude/skills/interactive-html-slides/`. Para compartir, comprime la carpeta **sin** `.agents/`, `.claude/`, `skills-lock.json` ni `.git/`: esos directorios contienen skills de terceros que se usan como referencia para mantener este repositorio y no forman parte de la skill.
 
 Advertencias: no es plataforma de exámenes seguros; las respuestas están en el navegador. La persistencia utiliza almacenamiento local y puede no funcionar en navegación privada o políticas restrictivas.
 
@@ -39,6 +39,14 @@ Pruebas: `uv run --python 3.12 python -m unittest discover -s tests -v`.
 - **Ilustración de portada** (`illustration`): elige la que encaje con el tema de la clase (`general`, `ciencia`, `programacion`, `datos`, `agentes`, `matematicas`, `comunicacion`), `none` para ninguna, o la ruta a un dibujo propio (SVG recomendado).
 - **Logos** (`meta.logos`): de 0 a 3 en la barra de navegación; sin logos no queda hueco.
 - **Tema** (`meta.theme`): `light`, `dark` o `auto`. Quien ve la presentación puede alternar claro/oscuro con el botón de tema o la tecla `T`; su elección se recuerda en su navegador.
+- **Encaje de imágenes** (`image.fit`): `contain` (por defecto) para diagramas y capturas; `cover` recorta fotografías para llenar el marco.
+
+## Durante la clase
+
+- **Controles**: `←/→` o deslizar en pantallas táctiles, `O` índice, `N` notas, `S` solución, `T` tema, `F` pantalla completa, `Home/End`.
+- **Vista del ponente** (`P` o botón «Ponente»): ventana aparte con la diapositiva actual, la siguiente, las notas y un cronómetro, sincronizada con la proyección. Si no se abre, permite las ventanas emergentes.
+- **Enlaces directos**: `presentacion.html#5` abre la diapositiva 5.
+- **PDF**: `Ctrl/Cmd+P` → Guardar como PDF imprime una diapositiva activa por página, en tema claro y sin botones.
 
 Las rutas locales se resuelven respecto al JSON de contenido y `create_deck.py` las incrusta en Base64. No se admiten URLs remotas.
 
@@ -50,7 +58,8 @@ El botón **Gestionar** abre el panel lateral con:
 
 - **Presentación**: tamaño de la diapositiva (porcentaje del espacio de pantalla, 85 % por defecto) y tema por defecto.
 - **Logotipos**: subir, quitar y editar el texto alternativo de 0–3 logos.
-- **Diapositiva**: selector con todas las diapositivas, casilla para **desactivar o reactivar** cada una, ilustración de portada (en portadas), imagen de la diapositiva con texto alternativo, pie y disposición en dos columnas, y el JSON del ejercicio (validado al aplicarlo).
+- **Revisar desbordamientos**: lista las diapositivas cuyo contenido no cabe en el lienzo 16:9 (la barra marca además «⚠ Desborda» en la actual).
+- **Diapositiva**: selector con todas las diapositivas, casilla para **desactivar o reactivar** cada una, ilustración de portada (en portadas), imagen de la diapositiva con texto alternativo, pie, recorte y disposición en dos columnas, y el JSON del ejercicio (validado al aplicarlo).
 - **Acciones**: descargar o importar el borrador JSON, restaurar el contenido original y **Generar HTML definitivo**.
 
 Los cambios se guardan automáticamente en `localStorage`. Para conservarlos fuera del navegador usa **Descargar borrador JSON**; en otro equipo, impórtalo con **Importar JSON…** o regenera la carpeta con `create_deck.py --content borrador.json --output carpeta --force`. **Restaurar contenido original** descarta los cambios locales.

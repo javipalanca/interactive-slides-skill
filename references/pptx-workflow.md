@@ -6,9 +6,9 @@ Comando (siempre con uv, que instala `python-pptx` en un entorno aislado):
 uv run --script scripts/extract_pptx.py clase1.pptx clase2.pptx --output trabajo/extraccion.json
 ```
 
-Para cada PPTX entrega, por diapositiva: número, `title` (placeholder de título), todas las formas (incluidas las de grupos) con su tipo, texto, tablas, descripción de gráficos (`chart.type`, nombres de series), notas del ponente e imágenes. Las imágenes se guardan en `trabajo/extraccion-media/` (configurable con `--media-dir`) y se listan como `image: {src, alt, content_type, supported}` con `src` relativo al JSON de extracción y el texto alternativo original.
+Para cada PPTX entrega, por diapositiva: número, `title` (placeholder de título), `hidden` (oculta en el original), `layout` (diseño de PowerPoint), todas las formas (incluidas las de grupos) con su tipo, texto, tablas, enlaces (`links`), datos de gráficos (`chart`: tipo, título, categorías y series con sus valores), texto de los nodos de SmartArt (`smartart`), notas del ponente e imágenes. Las imágenes se guardan en `trabajo/extraccion-media/` (configurable con `--media-dir`) y se listan como `image: {src, alt, content_type, supported}` con `src` relativo al JSON de extracción y el texto alternativo original.
 
-No extrae SmartArt ni animaciones, y los gráficos solo se describen: recréalos (SVG accesible) o notifícalos. Revisa visualmente los ficheros originales.
+No reproduce el aspecto de SmartArt ni de gráficos, ni las animaciones: con sus datos, recréalos como SVG accesible (con `alt` y, si son datos, también la tabla en el texto o las notas) o notifícalos. Revisa visualmente los ficheros originales. No ejecutes macros ni abras el PPTX en un programa que las ejecute.
 
 Consolidación:
 
@@ -21,6 +21,7 @@ Consolidación:
    [{"slide_id":"agentes","sources":[{"source_file":"modulo1.pptx","source_slide":7},{"source_file":"modulo2.pptx","source_slide":3}],"transformation":"Fusionado y convertido en pregunta guiada"}]
    ```
 
-5. Diagramas complejos: reconstruir en SVG semántico o, si se usa imagen, acompañar de alt y transcripción.
-6. No tratar como fuente fiable un texto ambiguo extraído de una imagen; verificar o advertir.
-7. Mantener backups y no modificar originales salvo orden expresa.
+5. Diapositivas `hidden: true`: el autor las ocultó; consérvalas solo si aportan, y entonces con `disabled: true`. Los `links` son referencias: cítalas en `image.caption`, en el texto o en las notas.
+6. Diagramas complejos: reconstruir en SVG semántico o, si se usa imagen, acompañar de alt y transcripción.
+7. No tratar como fuente fiable un texto ambiguo extraído de una imagen; verificar o advertir.
+8. Mantener backups y no modificar originales salvo orden expresa.
